@@ -40,6 +40,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('coconut', 'assets/game/coconut.png');
     this.load.image('boulder', 'assets/game/boulder.png');
     this.load.image('finish-gate', 'assets/game/finish-gate.png');
+    this.load.image('herb', 'assets/game/herb.png');
 
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');

@@ -308,7 +308,7 @@ export default class TreeScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Chapter Complete!', `Coins: ${this.coinsCollected}`, '#ffe9a8');
+    this.showEndCard('Canopy cleared!', 'Tap to continue', '#ffe9a8', false, 'DangerScene');
   }
 
   loseLevel(reason) {
