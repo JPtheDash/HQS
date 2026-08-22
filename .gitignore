@@ -49,3 +49,8 @@ keystore.properties
 
 # Built store artifacts
 dist-store/
+
+# Raw asset drop-zone. Files are copied into public/assets/ (which IS
+# committed and served); keeping the 100+ MB raw folder out of git avoids
+# bloating every clone.
+src/Hanuman assets/

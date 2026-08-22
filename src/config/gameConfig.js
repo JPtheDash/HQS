@@ -3,8 +3,9 @@
 // then letterboxes that design size onto whatever screen it runs on, so the
 // same coordinates work on a phone, a tablet, and the desktop preview.
 
-export const GAME_WIDTH = 1280;
-export const GAME_HEIGHT = 720;
+// Portrait, phone-shaped. Flip these two numbers for landscape.
+export const GAME_WIDTH = 720;
+export const GAME_HEIGHT = 1280;
 
 // Handy shortcuts for centering things.
 export const CENTER_X = GAME_WIDTH / 2;

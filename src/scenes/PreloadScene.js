@@ -12,10 +12,15 @@ export default class PreloadScene extends Phaser.Scene {
   preload() {
     this.drawProgressBar();
 
-    // ---- Asset queue -------------------------------------------------
-    // Assets go here as they arrive, e.g.:
-    //   this.load.image('hanuman', 'assets/characters/hanuman.png');
-    //   this.load.audio('theme', 'assets/audio/theme.mp3');
+    // ---- Main menu ---------------------------------------------------
+    this.load.image('menu-bg', 'assets/menu/mainbackground.png');
+    this.load.image('menu-play', 'assets/menu/play.png');
+    this.load.image('menu-settings', 'assets/menu/setting.png');
+    this.load.image('menu-sound', 'assets/menu/sound.png');
+    this.load.image('menu-story', 'assets/menu/story.png');
+    this.load.image('menu-coinpanel', 'assets/menu/coinpanel.png');
+    this.load.image('coin', 'assets/menu/coin.png');
+    this.load.image('glow', 'assets/menu/glow.png');
     // ------------------------------------------------------------------
   }
 
