@@ -57,9 +57,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   static createAnims(scene) {
     const a = scene.anims;
     if (a.exists('hero-idle')) return;
-    // After the repack a handful of border-straddling cells come out as half
-    // figures, so each animation uses only its clean frames.
-    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { start: 0, end: 7 }), frameRate: 7, repeat: -1 });
+    // Each animation uses only clean, consistent FRONT-facing frames. (The raw
+    // sheet mixes in side/back-turned and border-straddling cells, which made
+    // the character look like it was spinning around while standing.)
+    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { frames: [0, 1] }), frameRate: 2, repeat: -1 });
     a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [12, 13, 14, 15] }), frameRate: 12, repeat: -1 });
     a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [16, 17, 21] }), frameRate: 10, repeat: 0 });
   }
