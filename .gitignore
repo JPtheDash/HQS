@@ -54,3 +54,6 @@ dist-store/
 # committed and served); keeping the 100+ MB raw folder out of git avoids
 # bloating every clone.
 src/Hanuman assets/
+
+# Headless preview screenshots
+shots/

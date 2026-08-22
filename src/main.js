@@ -4,6 +4,7 @@ import BootScene from './scenes/BootScene.js';
 import PreloadScene from './scenes/PreloadScene.js';
 import HomeScene from './scenes/HomeScene.js';
 import CinematicScene from './scenes/CinematicScene.js';
+import PowerUpScene from './scenes/PowerUpScene.js';
 
 // One game config, kept small on purpose. New scenes get added to the
 // `scene` array below in the order they should be registered (the first
@@ -26,8 +27,9 @@ const config = {
     pixelArt: false,
     antialias: true
   },
-  scene: [BootScene, PreloadScene, HomeScene, CinematicScene]
+  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene]
 };
 
-// eslint-disable-next-line no-new
-new Phaser.Game(config);
+// Exposed so headless preview tooling (tools/shot.mjs) can jump straight to a
+// scene, and for quick debugging in the console.
+window.game = new Phaser.Game(config);

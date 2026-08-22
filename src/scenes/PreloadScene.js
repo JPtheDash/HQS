@@ -19,15 +19,16 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('menu-sound', 'assets/menu/sound.png');
     this.load.image('menu-story', 'assets/menu/story.png');
     this.load.image('menu-coinpanel', 'assets/menu/coinpanel.png');
-    this.load.image('coin', 'assets/menu/coin.png');
-    this.load.image('glow', 'assets/menu/glow.png');
+    this.load.image('coins', 'assets/menu/coins.png');
+    // NOTE: 'glow' is generated procedurally in BootScene (not loaded).
 
-    // ---- Prologue cinematic (Scenes 2-5) ----------------------------
-    this.load.image('cine-battlefield', 'assets/cinematic/cine-1-battlefield.png');
-    this.load.image('cine-fall', 'assets/cinematic/cine-2-lakshmana-falls.png');
-    this.load.image('cine-grief', 'assets/cinematic/cine-3-grief.png');
-    this.load.image('cine-dronagiri', 'assets/cinematic/cine-4-dronagiri.png');
-    this.load.image('cine-dawn', 'assets/cinematic/cine-5-bows-to-rama.png');
+    // ---- Prologue cinematic (Scenes 2-6) ----------------------------
+    this.load.image('scene-battle', 'assets/cinematic/scene2.png');    // Battle of Lanka
+    this.load.image('scene-fall', 'assets/cinematic/scene3.png');      // Lakshmana falls
+    this.load.image('scene-grief', 'assets/cinematic/scene4.png');     // Rama's despair
+    this.load.image('scene-dronagiri', 'assets/cinematic/scene26.png');// Dronagiri vista
+    this.load.image('scene-accept', 'assets/cinematic/scene5.png');    // Hanuman accepts
+    this.load.image('scene-powerup', 'assets/cinematic/scene6.png');   // Hanuman powers up
 
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');

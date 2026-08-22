@@ -10,7 +10,7 @@ import { playMusic, STORY_MUSIC } from '../audio/music.js';
 
 const BEATS = [
   {
-    key: 'cine-battlefield',
+    key: 'scene-battle',
     cam: { fromScale: 1.02, toScale: 1.16, fromY: 0, toY: 30 }, // slow push-in
     lines: [
       'The battle of Lanka had reached\nits final and fiercest hour.',
@@ -18,25 +18,25 @@ const BEATS = [
     ]
   },
   {
-    key: 'cine-fall',
+    key: 'scene-fall',
     cam: { fromScale: 1.25, toScale: 1.12, fromY: 0, toY: 0 }, // punch-in easing out
     effect: 'strike',
     lines: ['Lakshmana had fallen.', 'His life was fading.']
   },
   {
-    key: 'cine-grief',
+    key: 'scene-grief',
     cam: { fromScale: 1.04, toScale: 1.14, fromY: -20, toY: 20 },
     effect: 'embers',
     lines: ['Only the Sanjeevini herb\ncould save Lakshmana.']
   },
   {
-    key: 'cine-dronagiri',
+    key: 'scene-dronagiri',
     cam: { fromScale: 1.18, toScale: 1.06, fromY: 60, toY: -40 }, // pan up the peak
     effect: 'herbGlow',
     lines: ['But the herb grew far away,\nupon the sacred mountain of Dronagiri.']
   },
   {
-    key: 'cine-dawn',
+    key: 'scene-accept',
     cam: { fromScale: 1.14, toScale: 1.04, fromY: 20, toY: -10 },
     effect: 'dawn',
     lines: ['"Leave it to me."', '"I will bring the Sanjeevini before sunrise."']
@@ -261,9 +261,8 @@ export default class CinematicScene extends Phaser.Scene {
     this.tweens.killAll();
     this.cameras.main.fadeOut(BEAT_FADE, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      // Chapter 1 (Forest platforming) is next to build; for now, return to
-      // the menu so the loop is complete and testable.
-      this.scene.start('HomeScene');
+      // Scene 6 — Hanuman powers up, then gameplay begins.
+      this.scene.start('PowerUpScene');
     });
   }
 }

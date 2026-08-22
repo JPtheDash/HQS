@@ -18,7 +18,6 @@ export default class HomeScene extends Phaser.Scene {
     this.buildParticles();
     this.buildTitle();
     this.buildCoinPanel(90);
-    this.buildQuote();
     this.buildPlayButton();
     this.buildIconButtons();
 
@@ -104,42 +103,32 @@ export default class HomeScene extends Phaser.Scene {
     textObj.setFill(grad);
   }
 
-  // --- Coin counter (top-right) ------------------------------------------
+  // --- Coin counter (top-right): coins.png medallion + amount on a pill ---
   buildCoinPanel(amount) {
-    const panel = this.add.image(GAME_WIDTH - 150, 70, 'menu-coinpanel').setOrigin(0.5);
-    panel.setScale(240 / panel.width);
-    const b = panel.getBounds();
+    const coinSize = 62;
+    const cx = GAME_WIDTH - 44;
+    const cy = 60;
 
-    this.add.image(b.left + 34, b.centerY, 'coin').setScale(48 / 1024).setOrigin(0.5);
+    // Dark rounded pill behind the number for readability over bright sky.
+    const pillW = 120;
+    const pill = this.add.graphics();
+    pill.fillStyle(0x1a0d00, 0.55);
+    pill.fillRoundedRect(cx - coinSize / 2 - pillW, cy - 26, pillW + coinSize / 2, 52, 26);
+
     this.add
-      .text(b.left + 70, b.centerY, String(amount), {
+      .text(cx - coinSize / 2 - 14, cy, String(amount), {
         fontFamily: 'Georgia, serif',
         fontSize: '30px',
         color: '#ffe9a8',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        stroke: '#2a1500',
+        strokeThickness: 3
       })
-      .setOrigin(0, 0.5);
-  }
+      .setOrigin(1, 0.5);
 
-  // --- Tagline quote -----------------------------------------------------
-  buildQuote() {
-    this.add
-      .text(
-        CENTER_X,
-        GAME_HEIGHT - 430,
-        '"A devotee\'s strength.\nA hero\'s journey.\nA legend forever."',
-        {
-          fontFamily: 'Georgia, serif',
-          fontSize: '26px',
-          color: '#ffe9a8',
-          align: 'center',
-          fontStyle: 'italic',
-          lineSpacing: 8,
-          stroke: '#2a1500',
-          strokeThickness: 4
-        }
-      )
-      .setOrigin(0.5);
+    // Ornate Hanuman medallion sits on the right end of the pill.
+    const coin = this.add.image(cx, cy, 'coins').setOrigin(0.5);
+    coin.setScale(coinSize / coin.width);
   }
 
   // --- PLAY button -------------------------------------------------------
