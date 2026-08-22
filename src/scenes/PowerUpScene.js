@@ -77,7 +77,7 @@ export default class PowerUpScene extends Phaser.Scene {
       .text(
         CENTER_X,
         panelY + 30,
-        'Reach Dronagiri\nFind Sanjeevini\nReturn before sunrise',
+        'Reach Gandha Mardana\nFind Sanjeevini\nReturn before sunrise',
         {
           fontFamily: 'Georgia, serif',
           fontSize: '30px',

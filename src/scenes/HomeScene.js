@@ -210,8 +210,26 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   onIcon(label) {
-    // Placeholder — Settings/Sound/Story panels come later. Flash for feedback.
+    if (label === 'SOUND') {
+      // Toggle global mute (persists across scenes via the shared sound manager).
+      this.sound.mute = !this.sound.mute;
+      this.cameras.main.flash(150, this.sound.mute ? 120 : 255, 220, 120);
+      this.floatHint(this.sound.mute ? '🔇 Sound OFF' : '🔊 Sound ON');
+      return;
+    }
+    // Placeholder — Settings/Story panels come later. Flash for feedback.
     this.cameras.main.flash(150, 255, 220, 120);
+  }
+
+  floatHint(msg) {
+    const t = this.add
+      .text(CENTER_X, GAME_HEIGHT - 210, msg, {
+        fontFamily: 'Georgia, serif', fontSize: '28px', color: '#ffe9a8',
+        fontStyle: 'bold', stroke: '#2a1500', strokeThickness: 5
+      })
+      .setOrigin(0.5)
+      .setDepth(500);
+    this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 900, onComplete: () => t.destroy() });
   }
 
   startGame() {

@@ -15,6 +15,9 @@ export default class BootScene extends Phaser.Scene {
 
   create() {
     this.makeGlowTexture();
+    // Start muted (user preference). The SOUND button on the main menu toggles
+    // it back on; the setting persists across all scenes via the sound manager.
+    this.sound.mute = true;
     this.scene.start('PreloadScene');
   }
 

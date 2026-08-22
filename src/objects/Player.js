@@ -5,6 +5,12 @@ import Phaser from 'phaser';
 // wobble/tilt the sprite freely for a lively run/jump without disturbing
 // collision. (Swap to a real spritesheet later by replacing the visuals in
 // update() with anims.play — the physics/control code stays the same.)
+//
+// Controls: a quick TAP jumps; TAP-AND-HOLD keeps thrusting Hanuman upward
+// (a short "flight") for up to FLY_MAX ms of held time, refuelled on landing.
+const FLY_MAX = 2500; // ms of flight available per takeoff
+const FLY_RISE = -260; // steady rise speed while flying (px/s)
+
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
     super(scene, x, y, 'hanuman');
@@ -22,6 +28,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.body.setSize(bw, bh);
     this.body.setOffset((this.width - bw) / 2, this.height - bh - this.height * 0.05);
     this.setCollideWorldBounds(true);
+    this.halfH = (bh * this.scaleY) / 2;
 
     this.speed = 340;
     this.jumpVelocity = -1000;
@@ -30,6 +37,46 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.canDoubleJump = false; // enabled in Scene 8
     this.runTime = 0;
     this.alive = true;
+
+    // Flight state.
+    this.flyMax = FLY_MAX;
+    this.flyLeft = FLY_MAX;
+    this.wantFly = false;
+    this.flying = false;
+    this.wasOnGround = true;
+
+    this.buildFx(scene);
+  }
+
+  // Dust puffs (takeoff/land) and a golden flight trail.
+  buildFx(scene) {
+    this.dust = scene.add.particles(0, 0, 'glow', {
+      lifespan: 420,
+      speed: { min: 30, max: 110 },
+      angle: { min: 200, max: 340 },
+      scale: { start: 0.45, end: 0 },
+      alpha: { start: 0.75, end: 0 },
+      tint: 0xe8d7ad,
+      emitting: false
+    });
+    this.dust.setDepth(4);
+
+    this.trail = scene.add.particles(0, 0, 'glow', {
+      lifespan: 520,
+      speed: 24,
+      scale: { start: 0.55, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: 0xffd873,
+      frequency: 35,
+      follow: this,
+      followOffset: { x: 0, y: this.halfH * 0.6 },
+      emitting: false
+    });
+    this.trail.setDepth(3);
+  }
+
+  puffDust(n = 12) {
+    this.dust.emitParticleAt(this.x, this.y + this.halfH, n);
   }
 
   moveLeft() {
@@ -48,12 +95,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocityX(0);
   }
 
+  // Called on button/key press. Jumps from the ground (or double-jumps when
+  // unlocked). Holding is handled separately via setWantFly().
   tryJump() {
     const onGround = this.body.blocked.down || this.body.touching.down;
     if (onGround) {
       this.setVelocityY(this.jumpVelocity);
       this.jumpsUsed = 1;
       this.squash();
+      this.puffDust(14);
       return true;
     }
     if (this.canDoubleJump && this.jumpsUsed < 2) {
@@ -61,9 +111,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.jumpsUsed = 2;
       this.squash();
       this.spinFlip();
+      this.puffDust(8);
       return true;
     }
     return false;
+  }
+
+  setWantFly(on) {
+    this.wantFly = on;
   }
 
   squash() {
@@ -93,12 +148,41 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.alive) return;
 
     const onGround = this.body.blocked.down;
-    if (onGround) this.jumpsUsed = 0;
+
+    if (onGround) {
+      this.jumpsUsed = 0;
+      this.flyLeft = this.flyMax; // refuel on the ground
+      // Landing dust when we just touched down while falling.
+      if (!this.wasOnGround && this.body.velocity.y >= 0) this.puffDust(12);
+    }
+    this.wasOnGround = onGround;
+
+    // Flight: while the button is held, we're airborne, and fuel remains,
+    // ease velocity toward a gentle rise and burn fuel.
+    const canFly = this.wantFly && !onGround && this.flyLeft > 0;
+    if (canFly) {
+      this.flyLeft -= delta;
+      // Steady, guaranteed climb — overrides gravity for the frame so holding
+      // reliably lifts Hanuman (gravity is re-applied next step and overridden
+      // again while the button stays down).
+      this.setVelocityY(FLY_RISE);
+      if (!this.flying) {
+        this.flying = true;
+        this.trail.start();
+      }
+    } else if (this.flying) {
+      this.flying = false;
+      this.trail.stop();
+      if (this.flyLeft <= 0 && !onGround) this.puffDust(6);
+    }
 
     // Skip procedural tilt while a spinFlip tween owns the angle.
     const spinning = this.scene.tweens.isTweening(this);
 
-    if (!onGround && !spinning) {
+    if (this.flying && !spinning) {
+      // Superman-ish forward lean while flying.
+      this.setRotation(0.22 * this.facing);
+    } else if (!onGround && !spinning) {
       // Lean forward going up, back coming down.
       const tilt = Phaser.Math.Clamp(this.body.velocity.y / 2000, -0.18, 0.28) * this.facing;
       this.setRotation(tilt);

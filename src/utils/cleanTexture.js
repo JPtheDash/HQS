@@ -89,6 +89,39 @@ export function stripBackground(scene, key, tolerance = 78) {
     );
   }
 
+  // Defringe: after the flood fill, edge pixels can keep a pale halo blended
+  // from the old background. Trim one ring of edge pixels that are still
+  // background-ish under a looser tolerance and border a now-transparent pixel.
+  const looseTol2 = (tolerance * 1.6) * (tolerance * 1.6);
+  const isBgLoose = (i) => {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    for (const c of cornerColors) {
+      const dr = r - c[0], dg = g - c[1], db = b - c[2];
+      if (dr * dr + dg * dg + db * db <= looseTol2) return true;
+    }
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    return max - min <= 34 && max >= 30;
+  };
+  const toClear = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const p = y * w + x;
+      const i = p * 4;
+      if (d[i + 3] === 0) continue;
+      // Does it touch transparency?
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (d[(ny * w + nx) * 4 + 3] === 0) { edge = true; break; }
+        }
+      }
+      if (edge && isBgLoose(i)) toClear.push(i);
+    }
+  }
+  for (const i of toClear) d[i + 3] = 0;
+
   ctx.putImageData(imgData, 0, 0);
   scene.textures.remove(key);
   const tex = scene.textures.createCanvas(key, w, h);

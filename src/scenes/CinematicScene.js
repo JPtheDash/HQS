@@ -33,7 +33,7 @@ const BEATS = [
     key: 'scene-dronagiri',
     cam: { fromScale: 1.18, toScale: 1.06, fromY: 60, toY: -40 }, // pan up the peak
     effect: 'herbGlow',
-    lines: ['But the herb grew far away,\nupon the sacred mountain of Dronagiri.']
+    lines: ['But the herb grew far away,\nupon the sacred mountain of Gandha Mardana.']
   },
   {
     key: 'scene-accept',

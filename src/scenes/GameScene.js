@@ -150,10 +150,13 @@ export default class GameScene extends Phaser.Scene {
 
   // --- Floating grass ledge ---------------------------------------------
   buildLedge(cx, topY, width) {
-    const img = this.add.image(cx, topY, 'ledge').setDepth(-5);
+    // Anchor the image by its TOP so `topY` is exactly the visible surface,
+    // then put the collision strip right on that surface — no floating gap
+    // between where Hanuman stands and the grass he stands on.
+    const img = this.add.image(cx, topY, 'ledge').setOrigin(0.5, 0).setDepth(-5);
     img.setScale(width / img.width);
-    // Thin collision strip along the ledge's grass top.
-    const body = this.add.rectangle(cx, topY - img.displayHeight * 0.28, width * 0.8, 26);
+    const surfaceY = topY + 14; // a hair into the grass so feet sit on it
+    const body = this.add.rectangle(cx, surfaceY, width * 0.82, 24);
     this.physics.add.existing(body, true);
     body.setVisible(false);
     this.solids.add(body);
@@ -246,14 +249,39 @@ export default class GameScene extends Phaser.Scene {
     this.rightBtn.on('pointerdown', () => (this.ctrl.right = true));
     this.rightBtn.on('pointerup', () => (this.ctrl.right = false));
     this.rightBtn.on('pointerout', () => (this.ctrl.right = false));
-    this.jumpBtn.on('pointerdown', () => this.player.tryJump());
 
-    // Keyboard for desktop testing.
+    // Jump button: press = jump, hold = keep flying.
+    const jumpDown = () => { this.player.tryJump(); this.player.setWantFly(true); };
+    const jumpUp = () => this.player.setWantFly(false);
+    this.jumpBtn.on('pointerdown', jumpDown);
+    this.jumpBtn.on('pointerup', jumpUp);
+    this.jumpBtn.on('pointerout', jumpUp);
+
+    // Keyboard for desktop testing (hold to fly, same as the button).
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('A,D,W,SPACE');
-    this.input.keyboard.on('keydown-SPACE', () => this.player.tryJump());
-    this.input.keyboard.on('keydown-UP', () => this.player.tryJump());
-    this.input.keyboard.on('keydown-W', () => this.player.tryJump());
+    ['keydown-SPACE', 'keydown-UP', 'keydown-W'].forEach((e) =>
+      this.input.keyboard.on(e, (ev) => { if (!ev.repeat) jumpDown(); })
+    );
+    ['keyup-SPACE', 'keyup-UP', 'keyup-W'].forEach((e) =>
+      this.input.keyboard.on(e, jumpUp)
+    );
+
+    this.buildFlyMeter();
+  }
+
+  // Small flight-fuel bar above the jump button; only visible mid-flight.
+  buildFlyMeter() {
+    const x = GAME_WIDTH - 100;
+    const y = GAME_HEIGHT - 180;
+    this.flyMeter = this.add.container(x, y).setScrollFactor(0).setDepth(1003);
+    const bg = this.add.rectangle(0, 0, 120, 14, 0x000000, 0.45).setStrokeStyle(2, 0xffe9a8, 0.7);
+    this.flyFill = this.add.rectangle(-58, 0, 116, 8, 0xffd873).setOrigin(0, 0.5);
+    const label = this.add.text(0, -20, 'FLY', {
+      fontFamily: 'Arial', fontSize: '16px', color: '#ffe9a8', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.flyMeter.add([bg, this.flyFill, label]);
+    this.flyMeter.setAlpha(0);
   }
 
   makeButton(x, y, label, radius = 62) {
@@ -274,9 +302,10 @@ export default class GameScene extends Phaser.Scene {
   // --- Contextual tutorial signposts ------------------------------------
   buildTutorialSigns() {
     this.sign(220, GROUND_Y - 300, 'Use ◀ ▶ to MOVE');
-    this.sign(950, GROUND_Y - 320, 'TAP ▲ to JUMP the gap!');
-    this.sign(1720, GROUND_Y - 400, 'Land on the ledge');
-    this.sign(1360, GROUND_Y - 250, 'Avoid thorns!');
+    this.sign(760, GROUND_Y - 330, 'TAP ▲ = JUMP\nHOLD ▲ = FLY!');
+    this.sign(1050, GROUND_Y - 300, 'Hold ▲ to glide the gap');
+    this.sign(1720, GROUND_Y - 340, 'Land on the ledge');
+    this.sign(1360, GROUND_Y - 220, 'Avoid thorns!');
     this.sign(2050, GROUND_Y - 240, 'COLLECT fruit & coins');
   }
 
@@ -351,6 +380,13 @@ export default class GameScene extends Phaser.Scene {
     if (left && !right) this.player.moveLeft();
     else if (right && !left) this.player.moveRight();
     else this.player.stopMoving();
+
+    // Flight-fuel bar: show while airborne or not full, hide when topped up.
+    const fuel = Phaser.Math.Clamp(this.player.flyLeft / this.player.flyMax, 0, 1);
+    this.flyFill.width = 116 * fuel;
+    this.flyFill.fillColor = fuel > 0.35 ? 0xffd873 : 0xff8c5a;
+    const showMeter = this.player.flying || fuel < 0.999;
+    this.flyMeter.setAlpha(Phaser.Math.Linear(this.flyMeter.alpha, showMeter ? 1 : 0, 0.15));
 
     // Fell into the gap / off the world.
     if (this.player.y > GAME_HEIGHT + 100) this.loseLevel('Hanuman fell...');
