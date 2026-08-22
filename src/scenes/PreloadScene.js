@@ -21,6 +21,17 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('menu-coinpanel', 'assets/menu/coinpanel.png');
     this.load.image('coin', 'assets/menu/coin.png');
     this.load.image('glow', 'assets/menu/glow.png');
+
+    // ---- Prologue cinematic (Scenes 2-5) ----------------------------
+    this.load.image('cine-battlefield', 'assets/cinematic/cine-1-battlefield.png');
+    this.load.image('cine-fall', 'assets/cinematic/cine-2-lakshmana-falls.png');
+    this.load.image('cine-grief', 'assets/cinematic/cine-3-grief.png');
+    this.load.image('cine-dronagiri', 'assets/cinematic/cine-4-dronagiri.png');
+    this.load.image('cine-dawn', 'assets/cinematic/cine-5-bows-to-rama.png');
+
+    // ---- Music ------------------------------------------------------
+    this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');
+    this.load.audio('game-music', 'assets/audio/game.mp3');
     // ------------------------------------------------------------------
   }
 

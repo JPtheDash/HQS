@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CENTER_X, GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { playMusic, STORY_MUSIC } from '../audio/music.js';
 
 // SCENE 1 — MAIN MENU
 // Cinematic title screen. The backdrop (Hanuman on the cliff at sunrise) is a
@@ -20,6 +21,9 @@ export default class HomeScene extends Phaser.Scene {
     this.buildQuote();
     this.buildPlayButton();
     this.buildIconButtons();
+
+    // Story track for the menu (and all non-gameplay screens).
+    playMusic(this, STORY_MUSIC, { volume: 0.45 });
 
     // Gentle fade-in from black on first entry.
     this.cameras.main.fadeIn(700, 0, 0, 0);

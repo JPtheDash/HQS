@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, COLORS } from './config/gameConfig.js';
 import BootScene from './scenes/BootScene.js';
 import PreloadScene from './scenes/PreloadScene.js';
 import HomeScene from './scenes/HomeScene.js';
+import CinematicScene from './scenes/CinematicScene.js';
 
 // One game config, kept small on purpose. New scenes get added to the
 // `scene` array below in the order they should be registered (the first
@@ -25,7 +26,7 @@ const config = {
     pixelArt: false,
     antialias: true
   },
-  scene: [BootScene, PreloadScene, HomeScene]
+  scene: [BootScene, PreloadScene, HomeScene, CinematicScene]
 };
 
 // eslint-disable-next-line no-new
