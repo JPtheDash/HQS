@@ -403,7 +403,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Chapter Complete!', `Coins: ${this.coinsCollected}`, '#ffe9a8');
+    this.showEndCard('Ashoka Vatika cleared!', 'Tap to continue', '#ffe9a8', false, 'TreeScene');
   }
 
   loseLevel(reason) {
@@ -414,7 +414,7 @@ export default class GameScene extends Phaser.Scene {
     this.showEndCard(reason, 'Tap to try again', '#ff8c8c', true);
   }
 
-  showEndCard(title, subtitle, color, retry = false) {
+  showEndCard(title, subtitle, color, retry = false, nextScene = 'HomeScene') {
     const cam = this.cameras.main;
     const cx = cam.midPoint.x;
     const cy = cam.midPoint.y;
@@ -435,7 +435,7 @@ export default class GameScene extends Phaser.Scene {
       cam.fadeOut(400, 0, 0, 0);
       cam.once('camerafadeoutcomplete', () => {
         if (retry) this.scene.restart({ chapter: this.chapter });
-        else this.scene.start('HomeScene'); // Chapter 2 comes next
+        else this.scene.start(nextScene);
       });
     });
   }

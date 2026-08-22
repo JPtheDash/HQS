@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+const out = process.argv[2] || 'shots/treeview.png';
+const scrollX = parseInt(process.argv[3] || '0', 10);
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 450, height: 800 }, deviceScaleFactor: 2 });
+const errs = [];
+p.on('pageerror', e => errs.push(e.message));
+await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+await p.waitForTimeout(1400);
+await p.evaluate(() => { window.__NOAUDIO = true; window.game.scene.getScenes(true).forEach(s => window.game.scene.stop(s.scene.key)); window.game.scene.start('TreeScene'); });
+await p.waitForTimeout(1000);
+await p.evaluate((sx) => { const gs = window.game.scene.getScene('TreeScene'); gs.cameras.main.stopFollow(); gs.cameras.main.scrollX = sx; }, scrollX);
+await p.waitForTimeout(500);
+await p.screenshot({ path: out });
+console.log('VIEW', out, 'scrollX', scrollX, 'errors:', errs.length ? errs.join('\n') : 'none');
+await b.close();
