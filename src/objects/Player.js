@@ -45,6 +45,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.wasOnGround = true;
     this.spinning = false;
     this.squashing = false;
+    this.runDustAccum = 0;
 
     this.buildFx(scene);
   }
@@ -70,6 +71,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   puffDust(n = 12) { this.dust.emitParticleAt(this.x, this.y + this.halfH, n); }
+
+  // Little kicks of dust behind the feet to sell forward running.
+  puffRunDust() { this.dust.emitParticleAt(this.x - this.facing * 24, this.y + this.halfH, 3); }
 
   moveLeft() { this.setVelocityX(-this.speed); this.setFlipX(true); this.facing = -1; }
   moveRight() { this.setVelocityX(this.speed); this.setFlipX(false); this.facing = 1; }
@@ -148,12 +152,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.setRotation(tilt);
       if (!this.squashing) this.setScale(this.baseScaleX, this.baseScaleY);
     } else if (Math.abs(this.body.velocity.x) > 20) {
-      // Running: rhythmic lean + a subtle vertical/scale bob for a springy gait.
-      this.setRotation(Math.sin(this.runTime * 0.022) * 0.08);
+      // Running: forward lean + a springy stride bob (stretch up, squash down),
+      // plus periodic dust kicks behind the feet so it clearly reads as motion.
+      const phase = this.runTime * 0.024;
+      this.setRotation(this.facing * 0.06 + Math.sin(phase) * 0.05);
       if (!this.squashing) {
-        const bob = 1 + Math.sin(this.runTime * 0.044) * 0.03;
-        this.setScale(this.baseScaleX, this.baseScaleY * bob);
+        const s = Math.sin(phase * 2);
+        this.setScale(this.baseScaleX * (1 - s * 0.03), this.baseScaleY * (1 + s * 0.05));
       }
+      this.runDustAccum += delta;
+      if (this.runDustAccum > 180) { this.runDustAccum = 0; this.puffRunDust(); }
     } else {
       this.setRotation(0);
       if (!this.squashing) {
