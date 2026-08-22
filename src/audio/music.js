@@ -10,6 +10,17 @@ const REG_KEY = 'bgm.key';
 const REG_SND = 'bgm.sound';
 
 export function playMusic(scene, key, { volume = 0.5, fade = 600 } = {}) {
+  // Test/headless bypass, and never let an audio failure break a scene.
+  if (typeof window !== 'undefined' && window.__NOAUDIO) return null;
+  try {
+    return playMusicUnsafe(scene, key, { volume, fade });
+  } catch (e) {
+    console.warn('music failed (ignored):', e && e.message);
+    return null;
+  }
+}
+
+function playMusicUnsafe(scene, key, { volume = 0.5, fade = 600 } = {}) {
   const reg = scene.game.registry;
   const currentKey = reg.get(REG_KEY);
   const currentSnd = reg.get(REG_SND);

@@ -30,6 +30,16 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('scene-accept', 'assets/cinematic/scene5.png');    // Hanuman accepts
     this.load.image('scene-powerup', 'assets/cinematic/scene6.png');   // Hanuman powers up
 
+    // ---- Chapter 1 gameplay (Scene 7+) ------------------------------
+    this.load.image('hanuman', 'assets/game/hanuman.png');
+    this.load.image('ground', 'assets/game/ground.png');
+    this.load.image('ledge', 'assets/game/platform-ledge.png');
+    this.load.image('banana', 'assets/game/banana.png');
+    this.load.image('mango', 'assets/game/Mango.png');
+    this.load.image('coconut', 'assets/game/coconut.png');
+    this.load.image('boulder', 'assets/game/boulder.png');
+    this.load.image('finish-gate', 'assets/game/finish-gate.png');
+
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');
     this.load.audio('game-music', 'assets/audio/game.mp3');

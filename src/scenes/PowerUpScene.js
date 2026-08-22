@@ -125,9 +125,8 @@ export default class PowerUpScene extends Phaser.Scene {
   startGameplay() {
     this.cameras.main.fadeOut(600, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      // Chapter 1 gameplay (Scene 7 — Ashoka Vatika tutorial) is next to
-      // build. Until then, loop back to the menu so the prologue is testable.
-      this.scene.start('HomeScene');
+      // Scene 7 — Chapter 1 gameplay (Ashoka Vatika tutorial).
+      this.scene.start('GameScene', { chapter: 1 });
     });
   }
 }
