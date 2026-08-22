@@ -32,6 +32,11 @@ export default class PreloadScene extends Phaser.Scene {
 
     // ---- Chapter 1 gameplay (Scene 7+) ------------------------------
     this.load.image('hanuman', 'assets/game/hanuman.png');
+    // Animated Hanuman: 8 cols x 4 rows (idle / run / jump / fly), 192x256 cells.
+    this.load.spritesheet('hero', 'assets/game/spritesheet.png', {
+      frameWidth: 192,
+      frameHeight: 256
+    });
     this.load.image('ground', 'assets/game/ground.png');
     this.load.image('ledge', 'assets/game/platform-ledge.png');
     this.load.image('banana', 'assets/game/banana.png');
@@ -47,6 +52,9 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
+    // Note: plain uniform 192x256 slicing gives clean idle/run/jump frames.
+    // (An experimental flood-fill repack lived here but mis-seeded some frames,
+    // so we keep the straight slice; the fly row is handled in Player.js.)
     this.scene.start('HomeScene');
   }
 
