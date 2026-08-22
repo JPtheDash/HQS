@@ -241,6 +241,7 @@ export default class TreeScene extends Phaser.Scene {
     this.tweens.add({ targets: pickup, y: pickup.y - 60, alpha: 0, scale: pickup.scale * 1.3, duration: 350, onComplete: () => pickup.destroy() });
     if (pickup.kind === 'coin') {
       this.coinsCollected += 1;
+      this.registry.set('coinTotal', (this.registry.get('coinTotal') || 0) + 1);
     } else {
       this.energy = Phaser.Math.Clamp(this.energy + 0.2, 0, 1);
       this.hud.setEnergy(this.energy);
@@ -318,8 +319,9 @@ export default class TreeScene extends Phaser.Scene {
     this.showEndCard(reason, 'Tap to try again', '#ff8c8c', true);
   }
 
-  showEndCard(title, subtitle, color, retry = false) {
-    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0).setScrollFactor(0).setDepth(2000);
+  showEndCard(title, subtitle, color, retry = false, nextScene = 'HomeScene') {
+    const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+      .setScrollFactor(0).setDepth(2000).setInteractive();
     this.tweens.add({ targets: dim, fillAlpha: 0.6, duration: 400 });
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, title, {
       fontFamily: 'Georgia, serif', fontSize: '54px', color, fontStyle: 'bold', stroke: '#2a1500', strokeThickness: 6
@@ -329,12 +331,16 @@ export default class TreeScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
     this.tweens.add({ targets: t2, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
 
-    this.input.once('pointerdown', () => {
-      this.cameras.main.fadeOut(400, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
+    const go = () => {
+      if (this._advancing) return;
+      this._advancing = true;
+      this.cameras.main.fadeOut(350, 0, 0, 0);
+      this.time.delayedCall(380, () => {
         if (retry) this.scene.restart();
-        else this.scene.start('HomeScene'); // Chapter 2 comes next
+        else this.scene.start(nextScene);
       });
-    });
+    };
+    this.input.once('pointerdown', go);
+    this.input.keyboard.once('keydown', go);
   }
 }

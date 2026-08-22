@@ -17,7 +17,7 @@ export default class HomeScene extends Phaser.Scene {
     this.buildBackground();
     this.buildParticles();
     this.buildTitle();
-    this.buildCoinPanel(90);
+    this.buildCoinPanel(this.registry.get('coinTotal') || 0);
     this.buildPlayButton();
     this.buildIconButtons();
 

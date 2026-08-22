@@ -1,0 +1,21 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 450, height: 800 }, deviceScaleFactor: 2 });
+await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+await p.waitForTimeout(1400);
+await p.evaluate(() => { window.__NOAUDIO = true; window.game.scene.getScenes(true).forEach(s => window.game.scene.stop(s.scene.key)); window.game.scene.start('GameScene'); });
+await p.waitForTimeout(900);
+await p.evaluate(() => {
+  const gs = window.game.scene.getScene('GameScene');
+  window.__log = [];
+  gs.input.once('pointerdown', () => window.__log.push('PROBE pointerdown fired'));
+  gs.cameras.main.once('camerafadeoutcomplete', () => window.__log.push('fadeoutcomplete fired'));
+  gs.winLevel();
+});
+await p.waitForTimeout(600);
+await p.mouse.click(225, 400);
+await p.waitForTimeout(1400);
+const log = await p.evaluate(() => window.__log);
+console.log('log:', JSON.stringify(log));
+console.log('active:', await p.evaluate(() => window.game.scene.getScenes(true).map(s => s.scene.key)));
+await b.close();

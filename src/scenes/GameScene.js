@@ -340,6 +340,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (pickup.kind === 'coin') {
       this.coinsCollected += 1;
+      this.registry.set('coinTotal', (this.registry.get('coinTotal') || 0) + 1);
     } else {
       // Food restores energy.
       this.energy = Phaser.Math.Clamp(this.energy + 0.2, 0, 1);
@@ -419,8 +420,8 @@ export default class GameScene extends Phaser.Scene {
     const cx = cam.midPoint.x;
     const cy = cam.midPoint.y;
 
-    const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0).setScrollFactor(0).setDepth(2000);
-    dim.setScrollFactor(0);
+    const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+      .setScrollFactor(0).setDepth(2000).setInteractive();
     this.tweens.add({ targets: dim, fillAlpha: 0.6, duration: 400 });
 
     const t1 = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, title, {
@@ -431,12 +432,18 @@ export default class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
     this.tweens.add({ targets: t2, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
 
-    this.input.once('pointerdown', () => {
-      cam.fadeOut(400, 0, 0, 0);
-      cam.once('camerafadeoutcomplete', () => {
+    const go = () => {
+      if (this._advancing) return;
+      this._advancing = true;
+      cam.fadeOut(350, 0, 0, 0);
+      // Use the scene clock instead of the fade-complete event (which can stall
+      // if the tab throttles), so the level reliably advances.
+      this.time.delayedCall(380, () => {
         if (retry) this.scene.restart({ chapter: this.chapter });
         else this.scene.start(nextScene);
       });
-    });
+    };
+    this.input.once('pointerdown', go);
+    this.input.keyboard.once('keydown', go);
   }
 }

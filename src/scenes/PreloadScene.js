@@ -31,7 +31,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('scene-powerup', 'assets/cinematic/scene6.png');   // Hanuman powers up
 
     // ---- Chapter 1 gameplay (Scene 7+) ------------------------------
-    this.load.image('hanuman', 'assets/game/hanuman.png');
+    // (Animated 'hero' spritesheet is loaded in BootScene so the loading
+    // screen here can already show Hanuman running.)
     this.load.image('ground', 'assets/game/ground.png');
     this.load.image('ledge', 'assets/game/platform-ledge.png');
     this.load.image('banana', 'assets/game/banana.png');
@@ -66,6 +67,11 @@ export default class PreloadScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // Hanuman runs in place above the bar while assets load.
+    const runner = this.add.sprite(CENTER_X, y - 150, 'hero').setOrigin(0.5, 1);
+    runner.setScale(230 / runner.height);
+    if (this.anims.exists('hero-run')) runner.play('hero-run');
+
     const frame = this.add.graphics();
     frame.lineStyle(2, COLORS.accent, 1);
     frame.strokeRect(x, y, barWidth, barHeight);
@@ -82,6 +88,7 @@ export default class PreloadScene extends Phaser.Scene {
       label.destroy();
       frame.destroy();
       fill.destroy();
+      runner.destroy();
     });
   }
 }
