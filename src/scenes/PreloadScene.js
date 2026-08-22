@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { CENTER_X, CENTER_Y, COLORS } from '../config/gameConfig.js';
-import { buildHeroSheet } from '../utils/buildHeroSheet.js';
 
 // PreloadScene loads every asset the game uses up front and shows a simple
 // progress bar while it does. As you send assets, they get queued in
@@ -33,11 +32,6 @@ export default class PreloadScene extends Phaser.Scene {
 
     // ---- Chapter 1 gameplay (Scene 7+) ------------------------------
     this.load.image('hanuman', 'assets/game/hanuman.png');
-    // Animated Hanuman: 8 cols x 4 rows (idle / run / jump / fly), 192x256 cells.
-    this.load.spritesheet('hero', 'assets/game/spritesheet.png', {
-      frameWidth: 192,
-      frameHeight: 256
-    });
     this.load.image('ground', 'assets/game/ground.png');
     this.load.image('ledge', 'assets/game/platform-ledge.png');
     this.load.image('banana', 'assets/game/banana.png');
@@ -53,9 +47,6 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    // Rebuild the sheet into clean, isolated, baseline-aligned frames (drops the
-    // cross-cell bleed that made a stray fist/mace appear during flight).
-    buildHeroSheet(this);
     this.scene.start('HomeScene');
   }
 

@@ -1,38 +1,39 @@
 import Phaser from 'phaser';
 
-// Hanuman player, driven by the 'hero' spritesheet (8 cols x 4 rows):
-//   row 0 (0-7)  idle    row 1 (8-15)  run
-//   row 2 (16-23) jump   row 3 (24-31) fly
-// A tiny state machine in preUpdate() picks the right animation from the
-// physics state, so movement always looks alive.
+// Hanuman player. Uses the single clean transparent hanuman.png with
+// code-driven liveliness (idle breathing, run wobble, jump squash, flight
+// lean). Arcade bodies are axis-aligned and ignore rotation, so we can tilt/
+// scale the sprite freely without disturbing collision.
 //
-// Controls: a quick TAP jumps; TAP-AND-HOLD keeps thrusting Hanuman upward
-// (a short "flight") for up to FLY_MAX ms of held time, refuelled on landing.
+// NOTE: the generated spritesheet.png can't be grid-sliced — its poses overlap
+// and bleed across cell borders, so every slice produced broken/fragmented
+// frames. Swap to real frame animation once a properly *spaced* sheet exists
+// (each pose fully inside its own padded cell); the physics/controls below stay.
+//
+// Controls: a quick TAP jumps; TAP-AND-HOLD keeps thrusting upward (a short
+// flight) for up to FLY_MAX ms of held time, refuelled on landing.
 const FLY_MAX = 2500; // ms of flight available per takeoff
 const FLY_RISE = -260; // steady rise speed while flying (px/s)
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, 'hero', 0);
+    super(scene, x, y, 'hanuman');
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    Player.createAnims(scene);
-
-    const targetHeight = 190;
+    const targetHeight = 185;
     this.setScale(targetHeight / this.height);
     this.baseScaleX = this.scaleX;
     this.baseScaleY = this.scaleY;
 
-    // Collision box: a slim column around the torso/legs. The standing frames
-    // put the feet right at the bottom of the cell, so the body reaches the
-    // frame bottom — that way Hanuman's feet sit on the ground, not sunk in.
-    const bw = this.width * 0.34;
-    const bh = this.height * 0.66;
+    // Collision box: narrower/shorter than the artwork's transparent margins,
+    // reaching the bottom so the feet rest on the ground.
+    const bw = this.width * 0.40;
+    const bh = this.height * 0.72;
     this.body.setSize(bw, bh);
-    this.body.setOffset((this.width - bw) / 2, this.height - bh - 2);
+    this.body.setOffset((this.width - bw) / 2, this.height - bh - this.height * 0.02);
     this.setCollideWorldBounds(true);
-    this.setDepth(6); // above the dust (4) and thrust trail (3)
+    this.setDepth(6); // above dust (4) and thrust trail (3)
     this.halfH = (bh * this.scaleY) / 2;
 
     this.speed = 340;
@@ -40,6 +41,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.facing = 1;
     this.jumpsUsed = 0;
     this.canDoubleJump = false; // enabled in Scene 8
+    this.runTime = 0;
     this.alive = true;
 
     // Flight state.
@@ -48,21 +50,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.wantFly = false;
     this.flying = false;
     this.wasOnGround = true;
-    this.currentAnim = '';
+
+    // Visual-lock flags so procedural tilt/scale don't fight active tweens.
+    this.spinning = false;
+    this.squashing = false;
 
     this.buildFx(scene);
-    this.play('hero-idle');
-  }
-
-  static createAnims(scene) {
-    const a = scene.anims;
-    if (a.exists('hero-idle')) return;
-    // Each animation uses only clean, consistent FRONT-facing frames. (The raw
-    // sheet mixes in side/back-turned and border-straddling cells, which made
-    // the character look like it was spinning around while standing.)
-    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { frames: [0, 1] }), frameRate: 2, repeat: -1 });
-    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [12, 13, 14, 15] }), frameRate: 12, repeat: -1 });
-    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [16, 17, 21] }), frameRate: 10, repeat: 0 });
   }
 
   // Dust puffs (takeoff/land) and a golden flight trail.
@@ -89,17 +82,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       followOffset: { x: 0, y: this.halfH * 0.85 },
       emitting: false
     });
-    this.trail.setDepth(3); // behind the player (player depth is higher)
+    this.trail.setDepth(3);
   }
 
   puffDust(n = 12) {
     this.dust.emitParticleAt(this.x, this.y + this.halfH, n);
-  }
-
-  setAnim(key) {
-    if (this.currentAnim === key) return;
-    this.currentAnim = key;
-    this.play(key, true);
   }
 
   moveLeft() {
@@ -145,13 +132,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   squash() {
+    this.squashing = true;
     this.scene.tweens.add({
       targets: this,
       scaleX: this.baseScaleX * 1.12,
       scaleY: this.baseScaleY * 0.9,
       duration: 110,
       yoyo: true,
-      ease: 'Quad.easeOut'
+      ease: 'Quad.easeOut',
+      onComplete: () => { this.setScale(this.baseScaleX, this.baseScaleY); this.squashing = false; }
     });
   }
 
@@ -170,9 +159,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
     if (!this.alive) return;
+    this.runTime += delta;
 
     const onGround = this.body.blocked.down;
-
     if (onGround) {
       this.jumpsUsed = 0;
       this.flyLeft = this.flyMax; // refuel on the ground
@@ -185,34 +174,35 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (canFly) {
       this.flyLeft -= delta;
       this.setVelocityY(FLY_RISE);
-      if (!this.flying) {
-        this.flying = true;
-        this.trail.start();
-      }
+      if (!this.flying) { this.flying = true; this.trail.start(); }
     } else if (this.flying) {
       this.flying = false;
       this.trail.stop();
       if (this.flyLeft <= 0 && !onGround) this.puffDust(6);
     }
 
-    // --- Animation state machine ---
-    // The sheet's dedicated fly row can't be grid-sliced (those poses are wider
-    // than a cell and overlap neighbours), so flight is rendered from the clean
-    // run frames with a forward "flying" lean + thrust trail.
-    if (this.spinning) {
-      // Double-jump spin owns the angle; don't fight it.
-    } else if (this.flying) {
-      this.setAnim('hero-run');
-      this.setRotation(this.facing * 0.7);
+    // --- Procedural liveliness (skipped while a tween owns angle/scale) ---
+    if (this.spinning) return;
+
+    if (this.flying) {
+      this.setRotation(this.facing * 0.7); // forward "flying" lean
+      if (!this.squashing) this.setScale(this.baseScaleX, this.baseScaleY);
     } else if (!onGround) {
-      this.setAnim('hero-jump');
-      this.setRotation(0);
+      // Lean forward going up, back coming down.
+      const tilt = Phaser.Math.Clamp(this.body.velocity.y / 2000, -0.18, 0.28) * this.facing;
+      this.setRotation(tilt);
+      if (!this.squashing) this.setScale(this.baseScaleX, this.baseScaleY);
     } else if (Math.abs(this.body.velocity.x) > 20) {
-      this.setAnim('hero-run');
-      this.setRotation(0);
+      // Running: a little rhythmic wobble.
+      this.setRotation(Math.sin(this.runTime * 0.02) * 0.07);
+      if (!this.squashing) this.setScale(this.baseScaleX, this.baseScaleY);
     } else {
-      this.setAnim('hero-idle');
+      // Idle: upright, with a gentle breathing pulse.
       this.setRotation(0);
+      if (!this.squashing) {
+        const breathe = 1 + Math.sin(this.runTime * 0.004) * 0.02;
+        this.setScale(this.baseScaleX, this.baseScaleY * breathe);
+      }
     }
   }
 
