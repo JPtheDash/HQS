@@ -1,25 +1,19 @@
-import Phaser from "phaser";
-import generatePlaceholderTextures from "../game/PlaceholderArt";
+import Phaser from 'phaser';
 
-/**
- * Nothing is loaded from disk yet - every texture is drawn at runtime by
- * PlaceholderArt. This scene exists as the one place that happens, so every
- * later scene can assume its textures already exist.
- */
+// BootScene runs first. It only loads the handful of assets the loading
+// screen itself needs (e.g. a logo or progress-bar art), then hands off to
+// PreloadScene which loads the bulk of the game. Right now there's nothing
+// to load, so it passes straight through.
 export default class BootScene extends Phaser.Scene {
+  constructor() {
+    super('BootScene');
+  }
 
-    constructor(){
+  preload() {
+    // Boot-screen assets go here later (logo, progress bar frame, etc.).
+  }
 
-        super("Boot");
-
-    }
-
-    create(){
-
-        generatePlaceholderTextures(this);
-
-        this.scene.start("Home");
-
-    }
-
+  create() {
+    this.scene.start('PreloadScene');
+  }
 }

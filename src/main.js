@@ -1,57 +1,32 @@
-import Phaser from "phaser";
-import { GAME_WIDTH, GAME_HEIGHT } from "./ui/layout";
-import BootScene from "./scenes/BootScene";
-import HomeScene from "./scenes/HomeScene";
-import CinematicScene from "./scenes/CinematicScene";
-import GameScene from "./scenes/GameScene";
-import LevelCompleteScene from "./scenes/LevelCompleteScene";
+import Phaser from 'phaser';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS } from './config/gameConfig.js';
+import BootScene from './scenes/BootScene.js';
+import PreloadScene from './scenes/PreloadScene.js';
+import HomeScene from './scenes/HomeScene.js';
 
-// Headless Chromium falls back to software WebGL and crawls at a few fps,
-// which makes automated playtesting useless. ?renderer=canvas lets tooling
-// ask for the canvas renderer instead; normal players never hit this.
-const forceCanvas =
-    typeof window !== "undefined" &&
-    window.location.search.includes("renderer=canvas");
-
+// One game config, kept small on purpose. New scenes get added to the
+// `scene` array below in the order they should be registered (the first
+// one is started automatically).
 const config = {
-
-    type: forceCanvas ? Phaser.CANVAS : Phaser.AUTO,
-
-    // The height comes from the phone - see canvasHeight() in ui/layout.js -
-    // so FIT has nothing left to letterbox.
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
-
-    parent: "game-container",
-
-    backgroundColor: "#1a2a4a",
-
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
-    },
-
-    physics: {
-        default: "arcade",
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
-    },
-
-    scene: [
-
-        BootScene,
-        HomeScene,
-        CinematicScene,
-        GameScene,
-        LevelCompleteScene
-
-    ]
-
+  type: Phaser.AUTO,
+  parent: 'game-container',
+  backgroundColor: COLORS.bg,
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
+  // FIT keeps the whole design visible and letterboxes the rest; CENTER_BOTH
+  // pins that letterboxed view to the middle of the screen.
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
+  // Physics is off until a scene needs it — we'll switch this on when we
+  // build the flying/gameplay screen.
+  render: {
+    pixelArt: false,
+    antialias: true
+  },
+  scene: [BootScene, PreloadScene, HomeScene]
 };
 
-const game = new Phaser.Game(config);
-
-// Handle for tools to drive scenes directly, mirroring the sibling project.
-window.__game = game;
+// eslint-disable-next-line no-new
+new Phaser.Game(config);
