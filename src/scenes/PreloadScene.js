@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CENTER_X, CENTER_Y, COLORS } from '../config/gameConfig.js';
+import { buildHeroSheet } from '../utils/buildHeroSheet.js';
 
 // PreloadScene loads every asset the game uses up front and shows a simple
 // progress bar while it does. As you send assets, they get queued in
@@ -52,9 +53,9 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    // Note: plain uniform 192x256 slicing gives clean idle/run/jump frames.
-    // (An experimental flood-fill repack lived here but mis-seeded some frames,
-    // so we keep the straight slice; the fly row is handled in Player.js.)
+    // Rebuild the sheet into clean, isolated, baseline-aligned frames (drops the
+    // cross-cell bleed that made a stray fist/mace appear during flight).
+    buildHeroSheet(this);
     this.scene.start('HomeScene');
   }
 

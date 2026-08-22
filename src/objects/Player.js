@@ -57,10 +57,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   static createAnims(scene) {
     const a = scene.anims;
     if (a.exists('hero-idle')) return;
+    // After the repack a handful of border-straddling cells come out as half
+    // figures, so each animation uses only its clean frames.
     a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { start: 0, end: 7 }), frameRate: 7, repeat: -1 });
-    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { start: 8, end: 15 }), frameRate: 14, repeat: -1 });
-    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { start: 16, end: 23 }), frameRate: 12, repeat: 0 });
-    a.create({ key: 'hero-fly', frames: a.generateFrameNumbers('hero', { start: 24, end: 31 }), frameRate: 12, repeat: -1 });
+    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [12, 13, 14, 15] }), frameRate: 12, repeat: -1 });
+    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [16, 17, 21] }), frameRate: 10, repeat: 0 });
   }
 
   // Dust puffs (takeoff/land) and a golden flight trail.
