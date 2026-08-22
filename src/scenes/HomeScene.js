@@ -210,6 +210,7 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   onIcon(label) {
+    if (this.modal) return; // one panel at a time
     if (label === 'SOUND') {
       // Toggle global mute (persists across scenes via the shared sound manager).
       this.sound.mute = !this.sound.mute;
@@ -217,8 +218,88 @@ export default class HomeScene extends Phaser.Scene {
       this.floatHint(this.sound.mute ? '🔇 Sound OFF' : '🔊 Sound ON');
       return;
     }
-    // Placeholder — Settings/Story panels come later. Flash for feedback.
-    this.cameras.main.flash(150, 255, 220, 120);
+    if (label === 'SETTINGS') this.openSettings();
+    else if (label === 'STORY') this.openStory();
+  }
+
+  // --- Modal panel scaffold ---------------------------------------------
+  openModal(title) {
+    const dim = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.62)
+      .setDepth(3000).setInteractive();
+    const panelW = GAME_WIDTH * 0.82;
+    const panelH = GAME_HEIGHT * 0.5;
+    const panel = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, panelW, panelH, 0x2a1608, 0.98)
+      .setStrokeStyle(4, 0xffd873).setDepth(3001);
+    const top = GAME_HEIGHT / 2 - panelH / 2;
+    const titleT = this.add.text(CENTER_X, top + 46, title, {
+      fontFamily: 'Georgia, serif', fontSize: '44px', color: '#ffd873',
+      fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
+    }).setOrigin(0.5).setDepth(3002);
+
+    // Close (✕) button.
+    const close = this.add.text(CENTER_X + panelW / 2 - 40, top + 40, '✕', {
+      fontFamily: 'Arial', fontSize: '40px', color: '#ffd873', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3002).setInteractive({ useHandCursor: true });
+
+    this.modal = this.add.container(0, 0, [dim, panel, titleT, close]).setDepth(3000);
+    const doClose = () => this.closeModal();
+    close.on('pointerup', doClose);
+    dim.on('pointerup', doClose);
+    return { top, panelW, panelH, addToModal: (o) => this.modal.add(o) };
+  }
+
+  closeModal() {
+    if (!this.modal) return;
+    this.modal.destroy();
+    this.modal = null;
+  }
+
+  panelButton(x, y, label, onClick, w = 360) {
+    const bg = this.add.rectangle(x, y, w, 66, 0x4a2a12, 1).setStrokeStyle(3, 0xffd873)
+      .setDepth(3002).setInteractive({ useHandCursor: true });
+    const t = this.add.text(x, y, label, {
+      fontFamily: 'Georgia, serif', fontSize: '30px', color: '#ffe9a8', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(3003);
+    bg.on('pointerover', () => bg.setFillStyle(0x6a3c1a, 1));
+    bg.on('pointerout', () => bg.setFillStyle(0x4a2a12, 1));
+    bg.on('pointerup', () => onClick(t, bg));
+    this.modal.add([bg, t]);
+    return { bg, t };
+  }
+
+  openSettings() {
+    const { top, addToModal } = this.openModal('SETTINGS');
+    const soundLabel = () => `Sound:  ${this.sound.mute ? 'OFF' : 'ON'}`;
+    const btn = this.panelButton(CENTER_X, top + 150, soundLabel(), (t) => {
+      this.sound.mute = !this.sound.mute;
+      t.setText(soundLabel());
+    });
+    const hint = this.add.text(CENTER_X, top + 250,
+      'Tap ▲ to JUMP\nHold ▲ to FLY\n◀ ▶ to move\nCollect fruit to restore energy', {
+        fontFamily: 'Georgia, serif', fontSize: '24px', color: '#e8d7ad',
+        align: 'center', lineSpacing: 8
+      }).setOrigin(0.5, 0).setDepth(3002);
+    addToModal(hint);
+  }
+
+  openStory() {
+    const { top, addToModal } = this.openModal('THE STORY');
+    const body = this.add.text(CENTER_X, top + 120,
+      'In the great war, Lakshmana falls,\nstruck down and near death.\n\n' +
+      'Only the Sanjeevini herb can save him —\nbut it grows far away, upon the\nsacred mountain of Gandha Mardana.\n\n' +
+      'Hanuman must race across forest, river,\nand storm to bring it back before sunrise.', {
+        fontFamily: 'Georgia, serif', fontSize: '25px', color: '#f3e6c8',
+        align: 'center', lineSpacing: 7
+      }).setOrigin(0.5, 0).setDepth(3002);
+    addToModal(body);
+    this.panelButton(CENTER_X, top + this.modalBottomOffset(), '▶  Watch Intro', () => {
+      this.closeModal();
+      this.startGame();
+    });
+  }
+
+  modalBottomOffset() {
+    return GAME_HEIGHT * 0.5 - 70; // near the bottom edge of the panel
   }
 
   floatHint(msg) {

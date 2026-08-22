@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+const which = process.argv[2] || 'openSettings';
+const out = process.argv[3] || 'shots/modal.png';
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 });
+const errs = [];
+p.on('pageerror', e => errs.push(e.message));
+await p.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+await p.waitForTimeout(1500);
+await p.evaluate((fn) => { const h = window.game.scene.getScene('HomeScene'); h[fn](); }, which);
+await p.waitForTimeout(500);
+await p.screenshot({ path: out });
+console.log(which, 'errors:', errs.length ? errs.join('\n') : 'none');
+await b.close();
