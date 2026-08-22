@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import Player from '../objects/Player.js';
 
 // BootScene runs first. It only loads the handful of assets the loading
 // screen itself needs (e.g. a logo or progress-bar art), then hands off to
@@ -11,18 +10,13 @@ export default class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load the animated Hanuman up front so the PreloadScene loading screen can
-    // show him running while the rest of the assets stream in.
-    // hero_clean.png is a pre-baked, cell-aligned sheet (see tools/genclean.mjs).
-    this.load.spritesheet('hero', 'assets/game/hero_clean.png', {
-      frameWidth: 192,
-      frameHeight: 256
-    });
+    // Load the clean Hanuman image up front so the PreloadScene loading screen
+    // can show him while the rest of the assets stream in.
+    this.load.image('hanuman', 'assets/game/hanuman.png');
   }
 
   create() {
     this.makeGlowTexture();
-    Player.createAnims(this); // register idle/run/jump/fly globally
     // Start muted (user preference). The SOUND button on the main menu toggles
     // it back on; the setting persists across all scenes via the sound manager.
     this.sound.mute = true;

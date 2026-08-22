@@ -68,10 +68,14 @@ export default class PreloadScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Hanuman runs in place above the bar while assets load.
-    const runner = this.add.sprite(CENTER_X, y - 150, 'hero').setOrigin(0.5, 1);
-    runner.setScale(230 / runner.height);
-    if (this.anims.exists('hero-run')) runner.play('hero-run');
+    // Hanuman bobs above the bar while assets load.
+    let runner = null;
+    if (this.textures.exists('hanuman')) {
+      runner = this.add.image(CENTER_X, y - 150, 'hanuman').setOrigin(0.5, 1);
+      runner.setScale(230 / runner.height);
+      this.tweens.add({ targets: runner, angle: { from: -5, to: 5 }, duration: 280, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: runner, y: runner.y - 12, duration: 280, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
 
     const frame = this.add.graphics();
     frame.lineStyle(2, COLORS.accent, 1);
@@ -89,7 +93,7 @@ export default class PreloadScene extends Phaser.Scene {
       label.destroy();
       frame.destroy();
       fill.destroy();
-      runner.destroy();
+      if (runner) runner.destroy();
     });
   }
 }
