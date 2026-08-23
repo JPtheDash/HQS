@@ -19,7 +19,9 @@ export default class DangerScene extends Phaser.Scene {
   }
 
   create() {
-    ['boulder', 'banana', 'mango'].forEach((k) => stripBackground(this, k));
+    // NB: boulder.png already ships with real alpha — never strip it (its grey
+    // rock would be flood-filled away as "neutral background").
+    ['banana', 'mango'].forEach((k) => stripBackground(this, k));
 
     this.finished = false;
     this.invincibleUntil = 0;
@@ -133,20 +135,33 @@ export default class DangerScene extends Phaser.Scene {
 
   buildFires(xs) {
     xs.forEach((x) => {
-      const zone = this.add.zone(x, GROUND_Y - 40, 90, 90);
+      const zone = this.add.zone(x, GROUND_Y - 70, 100, 130);
       this.physics.add.existing(zone, true);
       zone.active = true;
       this.hazards.add(zone);
-      const g = this.add.graphics().setDepth(-3);
+      // Graphics anchored at the flame BASE (x, GROUND_Y); flames drawn upward in
+      // local coords so the flicker tween scales height from the base, not the
+      // world origin. Depth 5 keeps it in front of the ground but behind Hanuman.
+      const g = this.add.graphics({ x, y: GROUND_Y }).setDepth(5);
       const draw = () => {
         g.clear();
         if (!zone.active) return;
-        g.fillStyle(0xff7b1a, 0.95); g.fillEllipse(x, GROUND_Y - 30, 60, 90);
-        g.fillStyle(0xffd23b, 0.95); g.fillEllipse(x, GROUND_Y - 24, 32, 60);
+        g.fillStyle(0xff7b1a, 0.20); g.fillEllipse(0, -70, 170, 210);        // glow
+        g.fillStyle(0xff4d15, 0.96);                                         // outer
+        g.beginPath();
+        g.moveTo(-46, 2); g.lineTo(-24, -78); g.lineTo(-8, -46);
+        g.lineTo(0, -150); g.lineTo(10, -48); g.lineTo(26, -84); g.lineTo(46, 2);
+        g.closePath(); g.fillPath();
+        g.fillStyle(0xffc21f, 0.98);                                         // mid
+        g.beginPath();
+        g.moveTo(-26, 2); g.lineTo(-12, -58); g.lineTo(0, -108); g.lineTo(12, -58); g.lineTo(26, 2);
+        g.closePath(); g.fillPath();
+        g.fillStyle(0xfff2c0, 0.95); g.fillEllipse(0, -30, 24, 52);          // core
+        g.fillStyle(0xff8a3a, 0.9); g.fillEllipse(0, -6, 84, 26);           // embers
       };
       draw();
       this.fires.push({ zone, g, draw });
-      this.tweens.add({ targets: g, scaleY: 1.15, duration: 260, yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: g, scaleY: 1.18, scaleX: 0.92, duration: 220, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     });
   }
 
@@ -272,7 +287,7 @@ export default class DangerScene extends Phaser.Scene {
     else this.player.stopMoving();
 
     // Deepen the darkness with progress.
-    this.dark.alpha = Phaser.Math.Clamp((this.player.x - 900) / (WORLD_W - 900), 0, 1) * 0.5;
+    this.dark.alpha = Phaser.Math.Clamp((this.player.x - 900) / (WORLD_W - 900), 0, 1) * 0.35;
 
     // Clean up boulders that rolled past.
     this.boulders.children.iterate((b) => {

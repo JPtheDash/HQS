@@ -26,7 +26,9 @@ export default class GameScene extends Phaser.Scene {
   create() {
     // Several props shipped with opaque/checker backgrounds — strip them so
     // they render cleanly over the world.
-    ['ground', 'ledge', 'banana', 'mango', 'coconut', 'boulder', 'finish-gate'].forEach(
+    // boulder.png already has real alpha — stripping erases the grey rock, so
+    // it's deliberately excluded here (the strip result is cached and shared).
+    ['ground', 'ledge', 'banana', 'mango', 'coconut', 'finish-gate'].forEach(
       (k) => stripBackground(this, k)
     );
 
