@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
+const p = await b.newPage({ viewport: { width: 420, height: 740 } });
+await p.addInitScript(() => { window.__NOAUDIO = true; });
+await p.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(2000);
+await p.evaluate(() => { window.game.scene.getScenes(true).forEach((s) => { if (s.scene.key !== 'GameScene') s.scene.stop(); }); window.game.scene.start('GameScene'); });
+await p.waitForTimeout(2500);
+await p.screenshot({ path: 'tools/shot_idle.png' });
+await p.evaluate(() => { const s = window.game.scene.getScene('GameScene'); if (s && s.player) s.player.moveRight(); });
+await p.waitForTimeout(300);
+await p.screenshot({ path: 'tools/shot_run.png' });
+await b.close();
+console.log('ok');

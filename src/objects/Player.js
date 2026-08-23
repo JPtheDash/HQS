@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 
-// Hanuman player, animated from the cleaned 6x4 'hero' spritesheet
-// (tools/genclean2.mjs bakes it to public/assets/game/hero6.png: checker
-// background stripped, each padded figure recentred into a uniform 341x512
-// cell, bottom-aligned to a shared baseline).
-//   idle 0-5 · run 6-11 · jump 12-15 · fly 18-23   (frame 16 is a flip — unused)
+// Hanuman player, animated from the cleaned 8x4 'hero' spritesheet
+// (tools/genclean3.mjs bakes it to public/assets/game/hero6.png: checker
+// background stripped, each figure detected as a connected component and
+// recentred into a uniform 224x208 cell, bottom-aligned to a shared baseline).
+// All frames are side-profile facing right. Frames are indexed row*8 + col:
+//   idle 0-7 · run 8-13 · jump 16-21 · fly 24-29   (trailing cells are empty)
 // A small state machine in preUpdate() picks the animation from the physics
 // state. Arcade bodies ignore rotation, so squash/tilt don't affect collision.
 //
@@ -12,7 +13,7 @@ import Phaser from 'phaser';
 // flight) for up to FLY_MAX ms of held time, refuelled on landing.
 const FLY_MAX = 2500;
 const FLY_RISE = -260;
-const BASELINE = 496; // baked feet line inside each 512px cell
+const BASELINE = 196; // baked feet line inside each 208px cell
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -21,7 +22,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     Player.createAnims(scene);
 
-    const targetHeight = 210;
+    const targetHeight = 220;
     this.setScale(targetHeight / this.height);
     this.baseScaleX = this.scaleX;
     this.baseScaleY = this.scaleY;
@@ -57,10 +58,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   static createAnims(scene) {
     const a = scene.anims;
     if (a.exists('hero-idle')) return;
-    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { frames: [0, 1, 2, 3, 4, 5] }), frameRate: 5, repeat: -1 });
-    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [6, 7, 8, 9, 10, 11] }), frameRate: 13, repeat: -1 });
-    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [12, 13, 14, 15] }), frameRate: 10, repeat: 0 });
-    a.create({ key: 'hero-fly', frames: a.generateFrameNumbers('hero', { frames: [18, 19, 20, 21, 22, 23] }), frameRate: 9, repeat: -1 });
+    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { frames: [0, 1, 2, 3, 4, 5, 6, 7] }), frameRate: 8, repeat: -1 });
+    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [8, 9, 10, 11, 12, 13] }), frameRate: 13, repeat: -1 });
+    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [16, 17, 18, 19, 20, 21] }), frameRate: 12, repeat: 0 });
+    a.create({ key: 'hero-fly', frames: a.generateFrameNumbers('hero', { frames: [24, 25, 26, 27, 28, 29] }), frameRate: 9, repeat: -1 });
   }
 
   buildFx(scene) {

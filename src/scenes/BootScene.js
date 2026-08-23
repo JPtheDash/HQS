@@ -12,9 +12,9 @@ export default class BootScene extends Phaser.Scene {
 
   preload() {
     // Load the animated Hanuman up front so the PreloadScene loading screen can
-    // show him running. hero6.png is the cleaned, cell-aligned 6x4 sheet baked
-    // by tools/genclean2.mjs from the user's padded spritesheet.
-    this.load.spritesheet('hero', 'assets/game/hero6.png', { frameWidth: 341, frameHeight: 512 });
+    // show him running. hero6.png is the cleaned, cell-aligned 8x4 sheet baked
+    // by tools/genclean3.mjs from the user's padded spritesheet.
+    this.load.spritesheet('hero', 'assets/game/hero6.png', { frameWidth: 224, frameHeight: 208 });
   }
 
   create() {
