@@ -1,31 +1,36 @@
 import Phaser from 'phaser';
 
-// Hanuman player — the single clean transparent hanuman.png with code-driven
-// motion. This is deliberate: the generated multi-pose spritesheet cannot be
-// sliced into stable frames (its poses overlap/vary and jitter in motion), so
-// we use the one clean image and bring it to life with tilt/squash/bob. Arcade
-// bodies ignore rotation, so none of this affects collision.
+// Hanuman player, animated from the cleaned 6x4 'hero' spritesheet
+// (tools/genclean2.mjs bakes it to public/assets/game/hero6.png: checker
+// background stripped, each padded figure recentred into a uniform 341x512
+// cell, bottom-aligned to a shared baseline).
+//   idle 0-5 · run 6-11 · jump 12-15 · fly 18-23   (frame 16 is a flip — unused)
+// A small state machine in preUpdate() picks the animation from the physics
+// state. Arcade bodies ignore rotation, so squash/tilt don't affect collision.
 //
 // Controls: a quick TAP jumps; TAP-AND-HOLD keeps thrusting upward (a short
 // flight) for up to FLY_MAX ms of held time, refuelled on landing.
 const FLY_MAX = 2500;
 const FLY_RISE = -260;
+const BASELINE = 496; // baked feet line inside each 512px cell
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, 'hanuman');
+    super(scene, x, y, 'hero', 0);
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    Player.createAnims(scene);
 
-    const targetHeight = 185;
+    const targetHeight = 210;
     this.setScale(targetHeight / this.height);
     this.baseScaleX = this.scaleX;
     this.baseScaleY = this.scaleY;
 
-    const bw = this.width * 0.40;
-    const bh = this.height * 0.72;
+    // Slim body reaching the baked baseline so the feet sit on the ground.
+    const bw = this.width * 0.30;
+    const bh = this.height * 0.58;
     this.body.setSize(bw, bh);
-    this.body.setOffset((this.width - bw) / 2, this.height - bh - this.height * 0.02);
+    this.body.setOffset((this.width - bw) / 2, BASELINE - bh);
     this.setCollideWorldBounds(true);
     this.setDepth(6);
     this.halfH = (bh * this.scaleY) / 2;
@@ -35,7 +40,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.facing = 1;
     this.jumpsUsed = 0;
     this.canDoubleJump = false;
-    this.runTime = 0;
     this.alive = true;
 
     this.flyMax = FLY_MAX;
@@ -44,17 +48,19 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.flying = false;
     this.wasOnGround = true;
     this.spinning = false;
-    this.squashing = false;
-    this.runDustAccum = 0;
+    this.currentAnim = '';
 
     this.buildFx(scene);
+    this.play('hero-idle');
   }
 
-  // A single static-image "lively idle/run" helper other screens can reuse
-  // (e.g. the loading screen), so the look stays consistent.
-  static animateStanding(sprite, scene) {
-    scene.tweens.add({ targets: sprite, angle: { from: -4, to: 4 }, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    scene.tweens.add({ targets: sprite, y: sprite.y - 10, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  static createAnims(scene) {
+    const a = scene.anims;
+    if (a.exists('hero-idle')) return;
+    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { frames: [0, 1, 2, 3, 4, 5] }), frameRate: 5, repeat: -1 });
+    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [6, 7, 8, 9, 10, 11] }), frameRate: 13, repeat: -1 });
+    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [12, 13, 14, 15] }), frameRate: 10, repeat: 0 });
+    a.create({ key: 'hero-fly', frames: a.generateFrameNumbers('hero', { frames: [18, 19, 20, 21, 22, 23] }), frameRate: 9, repeat: -1 });
   }
 
   buildFx(scene) {
@@ -72,8 +78,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   puffDust(n = 12) { this.dust.emitParticleAt(this.x, this.y + this.halfH, n); }
 
-  // Little kicks of dust behind the feet to sell forward running.
-  puffRunDust() { this.dust.emitParticleAt(this.x - this.facing * 24, this.y + this.halfH, 3); }
+  setAnim(key) {
+    if (this.currentAnim === key) return;
+    this.currentAnim = key;
+    this.play(key, true);
+  }
 
   moveLeft() { this.setVelocityX(-this.speed); this.setFlipX(true); this.facing = -1; }
   moveRight() { this.setVelocityX(this.speed); this.setFlipX(false); this.facing = 1; }
@@ -102,11 +111,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   setWantFly(on) { this.wantFly = on; }
 
   squash() {
-    this.squashing = true;
     this.scene.tweens.add({
       targets: this, scaleX: this.baseScaleX * 1.12, scaleY: this.baseScaleY * 0.9,
       duration: 110, yoyo: true, ease: 'Quad.easeOut',
-      onComplete: () => { this.setScale(this.baseScaleX, this.baseScaleY); this.squashing = false; }
+      onComplete: () => this.setScale(this.baseScaleX, this.baseScaleY)
     });
   }
 
@@ -121,7 +129,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
     if (!this.alive) return;
-    this.runTime += delta;
 
     const onGround = this.body.blocked.down;
     if (onGround) {
@@ -144,31 +151,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (this.spinning) return;
 
-    if (this.flying) {
-      this.setRotation(this.facing * 0.5);
-      if (!this.squashing) this.setScale(this.baseScaleX, this.baseScaleY);
-    } else if (!onGround) {
-      const tilt = Phaser.Math.Clamp(this.body.velocity.y / 2000, -0.18, 0.28) * this.facing;
-      this.setRotation(tilt);
-      if (!this.squashing) this.setScale(this.baseScaleX, this.baseScaleY);
-    } else if (Math.abs(this.body.velocity.x) > 20) {
-      // Running: forward lean + a springy stride bob (stretch up, squash down),
-      // plus periodic dust kicks behind the feet so it clearly reads as motion.
-      const phase = this.runTime * 0.024;
-      this.setRotation(this.facing * 0.06 + Math.sin(phase) * 0.05);
-      if (!this.squashing) {
-        const s = Math.sin(phase * 2);
-        this.setScale(this.baseScaleX * (1 - s * 0.03), this.baseScaleY * (1 + s * 0.05));
-      }
-      this.runDustAccum += delta;
-      if (this.runDustAccum > 180) { this.runDustAccum = 0; this.puffRunDust(); }
-    } else {
-      this.setRotation(0);
-      if (!this.squashing) {
-        const breathe = 1 + Math.sin(this.runTime * 0.004) * 0.02;
-        this.setScale(this.baseScaleX, this.baseScaleY * breathe);
-      }
-    }
+    if (this.flying) this.setAnim('hero-fly');
+    else if (!onGround) this.setAnim('hero-jump');
+    else if (Math.abs(this.body.velocity.x) > 20) this.setAnim('hero-run');
+    else this.setAnim('hero-idle');
   }
 
   enableDoubleJump() { this.canDoubleJump = true; }
