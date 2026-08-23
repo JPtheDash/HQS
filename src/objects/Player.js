@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
 
-// Hanuman player, animated from the cleaned 8x4 'hero' spritesheet
-// (tools/genclean3.mjs bakes it to public/assets/game/hero6.png: checker
+// Hanuman player, animated from the cleaned 8x5 'hero' spritesheet
+// (tools/genhero5.mjs bakes it to public/assets/game/hero6.png: checker
 // background stripped, each figure detected as a connected component and
-// recentred into a uniform 224x208 cell, bottom-aligned to a shared baseline).
+// recentred into a uniform 430x372 cell, bottom-aligned to a shared baseline).
 // All frames are side-profile facing right. Frames are indexed row*8 + col:
-//   idle 0-7 · run 8-13 · jump 16-21 · fly 24-29   (trailing cells are empty)
+//   idle 0-7 · run 8-13 · jump 16-21 · fly 24-29 · throw 32-37  (rest empty)
 // A small state machine in preUpdate() picks the animation from the physics
 // state. Arcade bodies ignore rotation, so squash/tilt don't affect collision.
 //
@@ -13,7 +13,7 @@ import Phaser from 'phaser';
 // flight) for up to FLY_MAX ms of held time, refuelled on landing.
 const FLY_MAX = 2500;
 const FLY_RISE = -260;
-const BASELINE = 196; // baked feet line inside each 208px cell
+const BASELINE = 360; // baked feet line inside each 372px cell
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -22,7 +22,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     Player.createAnims(scene);
 
-    const targetHeight = 220;
+    const targetHeight = 230;
     this.setScale(targetHeight / this.height);
     this.baseScaleX = this.scaleX;
     this.baseScaleY = this.scaleY;
@@ -49,10 +49,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.flying = false;
     this.wasOnGround = true;
     this.spinning = false;
+    this.throwing = false;
     this.currentAnim = '';
 
     this.buildFx(scene);
     this.play('hero-idle');
+  }
+
+  // Play the throw animation once. `onRelease` fires at the release frame so the
+  // scene can spawn the gada projectile in sync; returns false if already busy.
+  throwGada(onRelease) {
+    if (this.throwing) return false;
+    this.throwing = true;
+    this.currentAnim = 'hero-throw';
+    this.play('hero-throw', true);
+    this.scene.time.delayedCall(180, () => { if (this.throwing && onRelease) onRelease(); });
+    this.once('animationcomplete-hero-throw', () => { this.throwing = false; });
+    return true;
   }
 
   static createAnims(scene) {
@@ -62,6 +75,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [8, 9, 10, 11, 12, 13] }), frameRate: 13, repeat: -1 });
     a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [16, 17, 18, 19, 20, 21] }), frameRate: 12, repeat: 0 });
     a.create({ key: 'hero-fly', frames: a.generateFrameNumbers('hero', { frames: [24, 25, 26, 27, 28, 29] }), frameRate: 9, repeat: -1 });
+    a.create({ key: 'hero-throw', frames: a.generateFrameNumbers('hero', { frames: [32, 33, 34, 35, 36, 37] }), frameRate: 18, repeat: 0 });
   }
 
   buildFx(scene) {
@@ -150,7 +164,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       if (this.flyLeft <= 0 && !onGround) this.puffDust(6);
     }
 
-    if (this.spinning) return;
+    if (this.spinning || this.throwing) return;
 
     if (this.flying) this.setAnim('hero-fly');
     else if (!onGround) this.setAnim('hero-jump');
