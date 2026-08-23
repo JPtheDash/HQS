@@ -4,6 +4,7 @@ import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
+import { fallRespawn } from '../utils/respawn.js';
 
 // SCENE 7 — ASHOKA VATIKA (Chapter 1 tutorial)
 // A gentle side-scrolling platformer that teaches Move → Jump → Collect one
@@ -53,6 +54,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Player
     this.player = new Player(this, 150, GROUND_Y - 220);
+    this.spawnX = 150; this.spawnY = GROUND_Y - 220;
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.overlap(this.player, this.pickups, this.onCollect, null, this);
     this.physics.add.overlap(this.player, this.hazards, this.onHazard, null, this);
@@ -390,7 +392,7 @@ export default class GameScene extends Phaser.Scene {
     this.flyMeter.setAlpha(Phaser.Math.Linear(this.flyMeter.alpha, showMeter ? 1 : 0, 0.15));
 
     // Fell into the gap / off the world.
-    if (this.player.y > GAME_HEIGHT + 100) this.loseLevel('Hanuman fell...');
+    if (this.player.y > GAME_HEIGHT + 100) fallRespawn(this);
 
     // Reached the finish gate.
     if (this.finishZone && !this.finished) {

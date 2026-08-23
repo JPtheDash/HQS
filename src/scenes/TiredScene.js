@@ -4,6 +4,7 @@ import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
+import { fallRespawn } from '../utils/respawn.js';
 
 // SCENE 10 — HANUMAN GETS TIRED (Chapter 1 finale)
 // The long journey wears him down: ENERGY drains steadily, and as it falls his
@@ -42,6 +43,7 @@ export default class TiredScene extends Phaser.Scene {
     this.buildFinish(3240);
 
     this.player = new Player(this, 120, GROUND_Y - 220);
+    this.spawnX = 120; this.spawnY = GROUND_Y - 220;
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.overlap(this.player, this.pickups, this.onCollect, null, this);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -219,7 +221,7 @@ export default class TiredScene extends Phaser.Scene {
       this.banner('Hanuman is tired.\nFind food to restore energy!');
     }
 
-    if (this.player.y > GAME_HEIGHT + 100) this.loseLevel('Hanuman fell...');
+    if (this.player.y > GAME_HEIGHT + 100) fallRespawn(this);
     if (this.finishZone && Phaser.Geom.Rectangle.Overlaps(this.player.getBounds(), this.finishZone)) this.winLevel();
   }
 

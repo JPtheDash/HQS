@@ -4,6 +4,7 @@ import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
+import { fallRespawn } from '../utils/respawn.js';
 
 // SCENE 8 — TREE JUMPING (Chapter 1, part 2)
 // Hanuman climbs through the forest canopy on branch platforms — some of them
@@ -47,6 +48,7 @@ export default class TreeScene extends Phaser.Scene {
 
     // Player — double jump unlocked for this chapter.
     this.player = new Player(this, 120, GROUND_Y - 220);
+    this.spawnX = 120; this.spawnY = GROUND_Y - 220;
     this.player.enableDoubleJump();
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.overlap(this.player, this.pickups, this.onCollect, null, this);
@@ -290,7 +292,7 @@ export default class TreeScene extends Phaser.Scene {
       this.popup('Tap again in the air\nto DOUBLE JUMP!');
     }
 
-    if (this.player.y > GAME_HEIGHT + 100) this.loseLevel('Hanuman fell...');
+    if (this.player.y > GAME_HEIGHT + 100) fallRespawn(this);
 
     if (this.finishZone && Phaser.Geom.Rectangle.Overlaps(this.player.getBounds(), this.finishZone)) {
       this.winLevel();

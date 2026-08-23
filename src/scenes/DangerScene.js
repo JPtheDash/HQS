@@ -4,6 +4,7 @@ import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
+import { fallRespawn } from '../utils/respawn.js';
 
 // SCENE 9 — FIRST DANGER (Chapter 1, part 3)
 // The forest turns hostile. Three hazard types are introduced one at a time so
@@ -45,6 +46,7 @@ export default class DangerScene extends Phaser.Scene {
     this.buildFinish(3440);
 
     this.player = new Player(this, 120, GROUND_Y - 220);
+    this.spawnX = 120; this.spawnY = GROUND_Y - 220;
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.collider(this.boulders, this.solids);
     this.physics.add.overlap(this.player, this.hazards, this.onHazard, (pl, hz) => hz.active !== false, this);
@@ -277,7 +279,7 @@ export default class DangerScene extends Phaser.Scene {
       if (b && b.x < this.cameras.main.scrollX - 120) b.destroy();
     });
 
-    if (this.player.y > GAME_HEIGHT + 100) this.loseLevel('Hanuman fell...');
+    if (this.player.y > GAME_HEIGHT + 100) fallRespawn(this);
     if (this.finishZone && Phaser.Geom.Rectangle.Overlaps(this.player.getBounds(), this.finishZone)) this.winLevel();
   }
 

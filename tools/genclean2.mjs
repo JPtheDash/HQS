@@ -35,17 +35,28 @@ const dataUrl = await p.evaluate(async () => {
     st.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1, x + 1, y + 1, x - 1, y - 1, x + 1, y - 1, x - 1, y + 1);
   }
   // Defringe: trim leftover checker halo touching transparency.
-  const toClear = [];
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = idx(x, y); if (d[i + 3] === 0) continue;
-    let edge = false;
-    for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) {
-      const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-      if (d[idx(nx, ny) + 3] === 0) { edge = true; break; }
+  // Defringe: several passes trim the pale/grey checker halo left at figure
+  // edges. Edge pixels use a looser neutral test (anti-aliased checker blends
+  // slightly toward the figure colour), and each pass exposes the next ring.
+  const isHalo = (i) => {
+    const r = d[i], g = d[i + 1], bl = d[i + 2];
+    const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl);
+    return (mx - mn) <= 60; // wider than isBg to catch blended edge pixels
+  };
+  for (let pass = 0; pass < 3; pass++) {
+    const toClear = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = idx(x, y); if (d[i + 3] === 0) continue;
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        if (d[idx(nx, ny) + 3] === 0) { edge = true; break; }
+      }
+      if (edge && isHalo(i)) toClear.push(i);
     }
-    if (edge && isBg(i)) toClear.push(i);
+    if (!toClear.length) break;
+    toClear.forEach((i) => { d[i + 3] = 0; });
   }
-  toClear.forEach((i) => { d[i + 3] = 0; });
   ctx.putImageData(im, 0, 0);
 
   // Recenter each figure into a uniform integer cell, bottom-aligned.

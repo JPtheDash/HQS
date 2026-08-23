@@ -102,13 +102,38 @@ export function stripBackground(scene, key, tolerance = 78) {
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
     return max - min <= 34 && max >= 30;
   };
-  const toClear = [];
+  // Several passes so each cleared ring exposes the next halo pixel underneath,
+  // leaving crisp edges instead of a jagged fringe.
+  for (let pass = 0; pass < 3; pass++) {
+    const toClear = [];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const p = y * w + x;
+        const i = p * 4;
+        if (d[i + 3] === 0) continue;
+        // Does it touch transparency?
+        let edge = false;
+        for (let dy = -1; dy <= 1 && !edge; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            if (d[(ny * w + nx) * 4 + 3] === 0) { edge = true; break; }
+          }
+        }
+        if (edge && isBgLoose(i)) toClear.push(i);
+      }
+    }
+    if (!toClear.length) break;
+    for (const i of toClear) d[i + 3] = 0;
+  }
+
+  // Soften remaining hard edges: halve alpha on opaque pixels that still touch
+  // transparency, for a 1px anti-aliased rim instead of a stair-stepped cut.
+  const soften = [];
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const p = y * w + x;
-      const i = p * 4;
+      const i = (y * w + x) * 4;
       if (d[i + 3] === 0) continue;
-      // Does it touch transparency?
       let edge = false;
       for (let dy = -1; dy <= 1 && !edge; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -117,10 +142,10 @@ export function stripBackground(scene, key, tolerance = 78) {
           if (d[(ny * w + nx) * 4 + 3] === 0) { edge = true; break; }
         }
       }
-      if (edge && isBgLoose(i)) toClear.push(i);
+      if (edge) soften.push(i);
     }
   }
-  for (const i of toClear) d[i + 3] = 0;
+  for (const i of soften) d[i + 3] = Math.min(d[i + 3], 170);
 
   ctx.putImageData(imgData, 0, 0);
   scene.textures.remove(key);
