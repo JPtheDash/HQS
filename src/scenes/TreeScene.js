@@ -125,9 +125,9 @@ export default class TreeScene extends Phaser.Scene {
     // A floating grass-island platform (platform-ledge.png). The cropped art has
     // its grass surface at the very top, so anchor origin (0.5, 0) at y and put
     // the collision strip just inside the grass.
-    const img = this.add.image(x, y, 'ledge').setOrigin(0.5, 0).setDepth(-5);
+    const img = this.add.image(x, y, 'ledge-small').setOrigin(0.5, 0).setDepth(-5);
     img.setScale(w / img.width);
-    const surfaceY = y + 16;
+    const surfaceY = y + img.displayHeight * 0.15;
     const plank = this.add.rectangle(x, surfaceY, w * 0.9, 22);
     this.physics.add.existing(plank, true);
     plank.setVisible(false);

@@ -65,6 +65,7 @@ export default class DangerScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.fireballs, this.onFireballHit, null, this);
     this.physics.add.overlap(this.gadas, this.bats, this.onGadaBat, null, this);
     this.physics.add.overlap(this.gadas, this.fireballs, this.onGadaFireball, null, this);
+    this.physics.add.overlap(this.gadas, this.boulders, this.onGadaBoulder, null, this);
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.cameras.main.setFollowOffset(-80, 60);
@@ -249,22 +250,30 @@ export default class DangerScene extends Phaser.Scene {
     fb.rotation = ang + (Math.cos(ang) < 0 ? Math.PI : 0);
   }
 
-  autoThrowGada() {
+  // A horizontal swipe across the play area throws the gada; aiming is automatic
+  // (nearest bat, else nearest boulder ahead, else straight forward).
+  throwGadaSwipe() {
     if (this.finished || !this.player.alive || this.player.throwing) return;
     if (this.time.now < this.gadaCooldown) return;
-    // Nearest live bat that is ahead of Hanuman and within range.
-    let target = null, best = 720 * 720;
-    this.bats.children.iterate((b) => {
-      if (!b || !b.active || !b.alive) return;
-      if (b.x < this.player.x - 20) return;
-      const dx = b.x - this.player.x, dy = b.y - this.player.y;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < best) { best = d2; target = b; }
-    });
-    if (!target) return;
-    this.gadaCooldown = this.time.now + 850;
-    const tx = target.x, ty = target.y;
+    const target = this.nearestTarget();
+    this.gadaCooldown = this.time.now + 450;
+    const tx = target ? target.x : this.player.x + 460;
+    const ty = target ? target.y : this.player.y - 20;
     this.player.throwGada(() => this.spawnGada(tx, ty));
+  }
+
+  nearestTarget() {
+    let target = null, best = 820 * 820;
+    const consider = (o) => {
+      if (!o || !o.active || o.alive === false) return;
+      if (o.x < this.player.x - 40) return; // only things ahead
+      const dx = o.x - this.player.x, dy = o.y - this.player.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < best) { best = d2; target = o; }
+    };
+    this.bats.children.iterate(consider);
+    if (!target) this.boulders.children.iterate(consider); // bats first, then boulders
+    return target;
   }
 
   spawnGada(tx, ty) {
@@ -298,6 +307,19 @@ export default class DangerScene extends Phaser.Scene {
   onGadaFireball(gada, fb) {
     this.puffAt(fb.x, fb.y);
     fb.destroy();
+  }
+
+  onGadaBoulder(gada, boulder) {
+    if (boulder.smashed) return;
+    boulder.smashed = true;
+    if (boulder.body) boulder.body.enable = false;
+    this.puffAt(boulder.x, boulder.y);
+    this.cameras.main.shake(120, 0.006);
+    // Quick shatter: shrink + fade the rock away.
+    this.tweens.add({ targets: boulder, scale: boulder.scale * 0.3, alpha: 0, angle: boulder.angle + 90, duration: 200, onComplete: () => boulder.destroy() });
+    this.coinsCollected += 1;
+    this.registry.set('coinTotal', (this.registry.get('coinTotal') || 0) + 1);
+    this.floatText(boulder.x, boulder.y - 30, '+1', '#ffe9a8');
   }
 
   killBat(bat) {
@@ -362,6 +384,16 @@ export default class DangerScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('A,D,W,SPACE');
     ['keydown-SPACE', 'keydown-UP', 'keydown-W'].forEach((e) => this.input.keyboard.on(e, (ev) => { if (!ev.repeat) jd(); }));
     ['keyup-SPACE', 'keyup-UP', 'keyup-W'].forEach((e) => this.input.keyboard.on(e, ju));
+
+    // Swipe-to-throw: a horizontal drag across the play area (above the control
+    // buttons) hurls the gada; aiming is automatic. F key throws on desktop.
+    this.input.on('pointerdown', (ptr) => { this._swipe = { x: ptr.x, y: ptr.y, t: this.time.now, ok: ptr.y < GAME_HEIGHT - 170 }; });
+    this.input.on('pointerup', (ptr) => {
+      const s = this._swipe; if (!s || !s.ok) return;
+      const dx = ptr.x - s.x, dy = ptr.y - s.y, dt = this.time.now - s.t;
+      if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.1 && dt < 600) this.throwGadaSwipe();
+    });
+    this.input.keyboard.on('keydown-F', () => this.throwGadaSwipe());
   }
 
   makeButton(x, y, label, radius = 62) {
@@ -376,7 +408,7 @@ export default class DangerScene extends Phaser.Scene {
   buildSigns() {
     this.sign(500, GROUND_Y - 300, 'Danger ahead —\navoid the thorns!');
     this.sign(1500, GROUND_Y - 320, 'Rolling boulders!\nJUMP over them');
-    this.sign(1950, GROUND_Y - 360, 'Fire-bats! Hanuman\nhurls his gada at them');
+    this.sign(1950, GROUND_Y - 360, 'Fire-bats & boulders —\nSWIPE to hurl the gada!');
     this.sign(2500, GROUND_Y - 300, 'Fire! Cross when\nthe flames die down');
   }
 
@@ -433,9 +465,8 @@ export default class DangerScene extends Phaser.Scene {
       if (b && b.x < this.cameras.main.scrollX - 120) b.destroy();
     });
 
-    // Combat: auto-throw the gada at the nearest bat, keep fireballs oriented,
-    // and cull anything that has drifted off the world.
-    this.autoThrowGada();
+    // Combat: fireballs/bats/gadas are thrown by swipe; here we just cull
+    // anything that has drifted off the world.
     const leftEdge = this.cameras.main.scrollX - 200;
     this.bats.children.iterate((b) => { if (b && b.alive && b.x < leftEdge) { if (b.throwTimer) b.throwTimer.remove(); b.destroy(); } });
     this.fireballs.children.iterate((f) => {

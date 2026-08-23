@@ -35,6 +35,7 @@ export default class PreloadScene extends Phaser.Scene {
     // screen here can already show Hanuman running.)
     this.load.image('ground', 'assets/game/ground.png');
     this.load.image('ledge', 'assets/game/platform-ledge.png');
+    this.load.image('ledge-small', 'assets/game/ledge-small.png'); // compact island for narrow branches
     this.load.image('banana', 'assets/game/banana.png');
     this.load.image('mango', 'assets/game/Mango.png');
     this.load.image('coconut', 'assets/game/coconut.png');

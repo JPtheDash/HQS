@@ -1,0 +1,23 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
+const ctx = await b.newContext({ viewport: { width: 420, height: 740 } });
+const p = await ctx.newPage();
+const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type()==='error') errs.push('C:'+m.text()); });
+await p.addInitScript(() => { window.__NOAUDIO = true; });
+await p.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(2000);
+await p.evaluate(() => { window.game.scene.getScenes(true).forEach(s=>{if(s.scene.key!=='DangerScene')s.scene.stop();}); window.game.scene.start('DangerScene'); });
+await p.waitForTimeout(3000);
+await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); s.invincibleUntil=1e12; s.player.x=1700; s.player.body.reset(1700,s.player.y); s.cameras.main.scrollX=1340;
+  const bat=s.bats.create(2050, s.player.y-200,'bat'); bat.setScale(120/bat.height); bat.setDepth(7); bat.alive=true; bat.play('bat-fly'); });
+await p.evaluate(() => window.game.scene.getScene('DangerScene').throwGadaSwipe());
+await p.waitForTimeout(4000);
+const st1 = await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); return {bats:s.bats.countActive(true), coins:s.coinsCollected}; });
+// boulder test
+await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); s.gadaCooldown=0; const bo=s.boulders.create(2000, s.player.y-40,'boulder'); bo.setScale(90/bo.width); bo.setVelocityX(-60); bo.setDepth(2); s.throwGadaSwipe(); });
+await p.waitForTimeout(4000);
+const st2 = await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); return {boulders:s.boulders.countActive(true), coins:s.coinsCollected}; });
+console.log('bat swipe -> ', JSON.stringify(st1), '(coins>=2 => bat killed)');
+console.log('boulder swipe ->', JSON.stringify(st2), '(coins>2 => boulder smashed)');
+console.log('errs', errs.length?errs.slice(0,6):'none');
+await b.close();
