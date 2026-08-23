@@ -22,7 +22,7 @@ export default class TreeScene extends Phaser.Scene {
   create() {
     // Fruit pickups ship with opaque backgrounds — strip them (no-op if a
     // previous scene already cleaned them this session).
-    ['banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
+    ['ground', 'ledge', 'banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
 
     this.finished = false;
     this.invincibleUntil = 0;
@@ -91,9 +91,16 @@ export default class TreeScene extends Phaser.Scene {
   // --- Ground floor at the start -----------------------------------------
   buildFloor() {
     const w = 620;
-    this.add.rectangle(0, GROUND_Y, w, GAME_HEIGHT - GROUND_Y + 40, 0x4a7a34).setOrigin(0, 0).setDepth(-10);
-    this.add.rectangle(0, GROUND_Y, w, 16, 0x6fae4c).setOrigin(0, 0).setDepth(-9);
-    const body = this.add.rectangle(w / 2, GROUND_Y + 30, w, 60);
+    const texH = this.textures.get('ground').getSourceImage().height;
+    const tScale = 0.42;
+    const displayH = texH * tScale;
+    const grassOffset = displayH * 0.55;
+    const ts = this.add.tileSprite(0, GROUND_Y - grassOffset, w, displayH, 'ground')
+      .setOrigin(0, 0).setDepth(-8);
+    ts.setTileScale(tScale, tScale);
+    this.add.rectangle(0, GROUND_Y - grassOffset + displayH, w, GAME_HEIGHT, 0x3a2a18)
+      .setOrigin(0, 0).setDepth(-9);
+    const body = this.add.rectangle(w / 2, GROUND_Y + 40, w, 80);
     this.physics.add.existing(body, true);
     body.setVisible(false);
     this.solids.add(body);
@@ -115,27 +122,28 @@ export default class TreeScene extends Phaser.Scene {
   }
 
   makeBranch(x, y, w, range) {
-    const h = 30;
-    const leaf = this.add.ellipse(x, y - 6, w * 1.15, 54, 0x4f9a3f).setDepth(-6);
-    const limb = this.add.rectangle(x, y, w, h, 0x7a4a24).setStrokeStyle(3, 0x5a3418).setDepth(-5);
-    const plank = this.add.rectangle(x, y - h / 2 + 6, w * 0.94, 20);
+    // A floating grass-island platform (platform-ledge.png). The cropped art has
+    // its grass surface at the very top, so anchor origin (0.5, 0) at y and put
+    // the collision strip just inside the grass.
+    const img = this.add.image(x, y, 'ledge').setOrigin(0.5, 0).setDepth(-5);
+    img.setScale(w / img.width);
+    const surfaceY = y + 16;
+    const plank = this.add.rectangle(x, surfaceY, w * 0.9, 22);
     this.physics.add.existing(plank, true);
     plank.setVisible(false);
     this.solids.add(plank);
 
     if (range > 0) {
-      const mover = { limb, leaf, plank, baseX: x };
-      // Drift the visuals; the static body is re-synced each frame in update().
+      // Drift the visual; the static body is re-synced each frame in update().
       this.tweens.add({
-        targets: [limb, leaf],
+        targets: img,
         x: `+=${range}`,
         duration: 1800,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut'
       });
-      mover.prevX = limb.x;
-      this.movers.push(mover);
+      this.movers.push({ img, plank, prevX: img.x });
     }
   }
 
@@ -263,12 +271,11 @@ export default class TreeScene extends Phaser.Scene {
 
     // Re-sync moving branch bodies to their drifting visuals, and carry a rider.
     for (const m of this.movers) {
-      m.plank.x = m.limb.x;
-      m.leaf.x = m.limb.x;
+      m.plank.x = m.img.x;
       m.plank.body.updateFromGameObject();
-      const dx = m.limb.x - m.prevX;
+      const dx = m.img.x - m.prevX;
       if (dx !== 0 && this.isRiding(m.plank)) this.player.x += dx;
-      m.prevX = m.limb.x;
+      m.prevX = m.img.x;
     }
 
     const left = this.ctrl.left || this.cursors.left.isDown || this.keys.A.isDown;

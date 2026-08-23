@@ -21,7 +21,7 @@ export default class TiredScene extends Phaser.Scene {
   }
 
   create() {
-    ['banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
+    ['ground', 'banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
 
     this.finished = false;
     this.health = 3;
@@ -100,9 +100,18 @@ export default class TiredScene extends Phaser.Scene {
 
   addSpan(x0, x1) {
     const w = x1 - x0;
-    this.add.rectangle(x0, GROUND_Y, w, GAME_HEIGHT - GROUND_Y + 40, 0x5a3a1c).setOrigin(0, 0).setDepth(-11);
-    this.add.rectangle(x0, GROUND_Y, w, 16, 0xc08a3a).setOrigin(0, 0).setDepth(-10);
-    const body = this.add.rectangle(x0 + w / 2, GROUND_Y + 30, w, 60);
+    // ground.png tiled across the span; warm tint to match the tired dusk mood.
+    const texH = this.textures.get('ground').getSourceImage().height;
+    const tScale = 0.42;
+    const displayH = texH * tScale;
+    const grassOffset = displayH * 0.55;
+    const ts = this.add.tileSprite(x0, GROUND_Y - grassOffset, w, displayH, 'ground')
+      .setOrigin(0, 0).setDepth(-10);
+    ts.setTileScale(tScale, tScale);
+    ts.setTint(0xe6c79a);
+    this.add.rectangle(x0, GROUND_Y - grassOffset + displayH, w, GAME_HEIGHT, 0x5a3a1c)
+      .setOrigin(0, 0).setDepth(-11);
+    const body = this.add.rectangle(x0 + w / 2, GROUND_Y + 40, w, 80);
     this.physics.add.existing(body, true);
     body.setVisible(false);
     this.solids.add(body);

@@ -21,7 +21,7 @@ export default class DangerScene extends Phaser.Scene {
   create() {
     // NB: boulder.png already ships with real alpha — never strip it (its grey
     // rock would be flood-filled away as "neutral background").
-    ['banana', 'mango'].forEach((k) => stripBackground(this, k));
+    ['ground', 'banana', 'mango'].forEach((k) => stripBackground(this, k));
 
     this.finished = false;
     this.invincibleUntil = 0;
@@ -110,9 +110,18 @@ export default class DangerScene extends Phaser.Scene {
   }
 
   buildGround() {
-    this.add.rectangle(0, GROUND_Y, WORLD_W, GAME_HEIGHT - GROUND_Y + 40, 0x3a2a18).setOrigin(0, 0).setDepth(-11);
-    this.add.rectangle(0, GROUND_Y, WORLD_W, 16, 0x4f7a34).setOrigin(0, 0).setDepth(-10);
-    const body = this.add.rectangle(WORLD_W / 2, GROUND_Y + 30, WORLD_W, 60);
+    // ground.png tiled along the world; tinted a touch darker for the mood.
+    const texH = this.textures.get('ground').getSourceImage().height;
+    const tScale = 0.42;
+    const displayH = texH * tScale;
+    const grassOffset = displayH * 0.55;
+    const ts = this.add.tileSprite(0, GROUND_Y - grassOffset, WORLD_W, displayH, 'ground')
+      .setOrigin(0, 0).setDepth(-10);
+    ts.setTileScale(tScale, tScale);
+    ts.setTint(0xb9c2ac);
+    this.add.rectangle(0, GROUND_Y - grassOffset + displayH, WORLD_W, GAME_HEIGHT, 0x2a1e12)
+      .setOrigin(0, 0).setDepth(-11);
+    const body = this.add.rectangle(WORLD_W / 2, GROUND_Y + 40, WORLD_W, 80);
     this.physics.add.existing(body, true);
     body.setVisible(false);
     this.solids.add(body);
@@ -139,29 +148,17 @@ export default class DangerScene extends Phaser.Scene {
       this.physics.add.existing(zone, true);
       zone.active = true;
       this.hazards.add(zone);
-      // Graphics anchored at the flame BASE (x, GROUND_Y); flames drawn upward in
-      // local coords so the flicker tween scales height from the base, not the
-      // world origin. Depth 5 keeps it in front of the ground but behind Hanuman.
-      const g = this.add.graphics({ x, y: GROUND_Y }).setDepth(5);
-      const draw = () => {
-        g.clear();
-        if (!zone.active) return;
-        g.fillStyle(0xff7b1a, 0.20); g.fillEllipse(0, -70, 170, 210);        // glow
-        g.fillStyle(0xff4d15, 0.96);                                         // outer
-        g.beginPath();
-        g.moveTo(-46, 2); g.lineTo(-24, -78); g.lineTo(-8, -46);
-        g.lineTo(0, -150); g.lineTo(10, -48); g.lineTo(26, -84); g.lineTo(46, 2);
-        g.closePath(); g.fillPath();
-        g.fillStyle(0xffc21f, 0.98);                                         // mid
-        g.beginPath();
-        g.moveTo(-26, 2); g.lineTo(-12, -58); g.lineTo(0, -108); g.lineTo(12, -58); g.lineTo(26, 2);
-        g.closePath(); g.fillPath();
-        g.fillStyle(0xfff2c0, 0.95); g.fillEllipse(0, -30, 24, 52);          // core
-        g.fillStyle(0xff8a3a, 0.9); g.fillEllipse(0, -6, 84, 26);           // embers
-      };
+      // The baked flame sprite, anchored at its base on the ground. Depth 5
+      // keeps it in front of the ground but behind Hanuman (depth 6).
+      const img = this.add.image(x, GROUND_Y + 8, 'fire').setOrigin(0.5, 1).setDepth(5);
+      img.setScale(165 / img.height);
+      img.baseScaleX = img.scaleX; img.baseScaleY = img.scaleY;
+      const draw = () => img.setVisible(zone.active);
       draw();
-      this.fires.push({ zone, g, draw });
-      this.tweens.add({ targets: g, scaleY: 1.18, scaleX: 0.92, duration: 220, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.fires.push({ zone, g: img, draw });
+      // Flicker: gentle height/width wobble plus a brightness pulse.
+      this.tweens.add({ targets: img, scaleY: img.baseScaleY * 1.16, scaleX: img.baseScaleX * 0.9, duration: 230, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: img, alpha: 0.8, duration: 140, yoyo: true, repeat: -1 });
     });
   }
 

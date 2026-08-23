@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
+const p = await b.newPage({ viewport: { width: 420, height: 740 } });
+await p.addInitScript(() => { window.__NOAUDIO = true; });
+await p.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(1500);
+await p.evaluate(() => { window.game.scene.getScenes(true).forEach((s)=>{if(s.scene.key!=='DangerScene')s.scene.stop();}); window.game.scene.start('DangerScene'); });
+await p.waitForTimeout(2000);
+await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); s.time.removeAllEvents(); s.invincibleUntil=1e12; s.player.x=2630; s.fires.forEach((f)=>{f.zone.active=true; f.g.setVisible(true); f.draw();}); });
+await p.waitForTimeout(500);
+await p.screenshot({ path: 'tools/firecheck.png' });
+await b.close(); console.log('ok');
