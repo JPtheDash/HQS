@@ -38,7 +38,24 @@ const res = await p.evaluate(async ({ COLS, ROWS, OUTW, OUTH, BASE }) => {
     }
     const figs = comps.filter((f) => f.cnt > 1500).sort((a, b) => a.minx - b.minx);
     perRow.push(figs.length);
-    figs.forEach((f, cc) => { if (cc >= COLS) return; const fw = f.maxx - f.minx + 1, fh = f.maxy - f.miny + 1; const dx = cc * OUTW + Math.round((OUTW - fw) / 2); const dy = r * OUTH + Math.round(BASE - fh); ox.drawImage(c, f.minx, f.miny, fw, fh, dx, dy, fw, fh); });
+    figs.forEach((f, cc) => {
+      if (cc >= COLS) return;
+      const fw = f.maxx - f.minx + 1, fh = f.maxy - f.miny + 1;
+      let anchorCol; // source x that should land at the cell centre
+      if (r === 4) {
+        // Throw row: anchor by the FEET (mean x of the bottom band) so the body
+        // stays planted while the arm/gada swings forward — no sideways drift.
+        const bandTop = f.maxy - Math.round(fh * 0.28);
+        let sum = 0, n = 0;
+        for (let y = bandTop; y <= f.maxy; y++) for (let x = f.minx; x <= f.maxx; x++) if (alpha(x, y) > 20) { sum += x; n++; }
+        anchorCol = n ? sum / n : (f.minx + fw / 2);
+      } else {
+        anchorCol = f.minx + fw / 2; // centre the bounding box
+      }
+      const dx = cc * OUTW + Math.round(OUTW / 2 - (anchorCol - f.minx));
+      const dy = r * OUTH + Math.round(BASE - fh);
+      ox.drawImage(c, f.minx, f.miny, fw, fh, dx, dy, fw, fh);
+    });
   }
   return { url: out.toDataURL('image/png'), perRow };
 }, { COLS, ROWS, OUTW, OUTH, BASE });
