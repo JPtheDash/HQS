@@ -1,8 +1,13 @@
-// Clean the new 6x4 Hanuman sheet (spritesheet2.png): its "transparent"
-// background is a painted opaque checkerboard, so (1) flood-fill the checker
-// away from the borders (preserving the figures' interior highlights), then
-// (2) recenter each padded figure into a uniform, integer-sized, bottom-aligned
-// cell. Saves public/assets/game/hero6.png as a clean 6x4 spritesheet.
+// Clean the 6x4 Hanuman sheet (spritesheet2.png) into public/assets/game/hero6.png.
+//
+// The source "transparent" background is a painted opaque checkerboard, and the
+// figures are NOT aligned to a rigid grid: the flying poses (bottom row) are wide
+// and horizontal and drift across the nominal 341px cell borders. Slicing on
+// fixed cell rectangles therefore chopped those figures into fragments.
+//
+// Instead we (1) flood-fill the checker away from the borders, (2) defringe the
+// figure edges, then (3) find each row's figures as connected components and
+// place the six largest, ordered left-to-right, into uniform bottom-aligned cells.
 import { chromium } from 'playwright';
 import fs from 'fs';
 const b = await chromium.launch();
@@ -15,7 +20,7 @@ const dataUrl = await p.evaluate(async () => {
   const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
   const im = ctx.getImageData(0, 0, W, H); const d = im.data;
   const idx = (x, y) => (y * W + x) * 4;
-  // Checker background test: neutral grey, very dark OR fairly light.
+  // Checker background test: neutral grey (dark or light square of the checker).
   const isBg = (i) => {
     const r = d[i], g = d[i + 1], bl = d[i + 2];
     const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl);
@@ -34,14 +39,13 @@ const dataUrl = await p.evaluate(async () => {
     d[i + 3] = 0;
     st.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1, x + 1, y + 1, x - 1, y - 1, x + 1, y - 1, x - 1, y + 1);
   }
-  // Defringe: trim leftover checker halo touching transparency.
   // Defringe: several passes trim the pale/grey checker halo left at figure
   // edges. Edge pixels use a looser neutral test (anti-aliased checker blends
   // slightly toward the figure colour), and each pass exposes the next ring.
   const isHalo = (i) => {
     const r = d[i], g = d[i + 1], bl = d[i + 2];
     const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl);
-    return (mx - mn) <= 60; // wider than isBg to catch blended edge pixels
+    return (mx - mn) <= 60;
   };
   for (let pass = 0; pass < 3; pass++) {
     const toClear = [];
@@ -59,23 +63,46 @@ const dataUrl = await p.evaluate(async () => {
   }
   ctx.putImageData(im, 0, 0);
 
-  // Recenter each figure into a uniform integer cell, bottom-aligned.
+  // Find figures per row as connected components (the source is not grid-aligned).
   const outW = Math.floor(W / cols), outH = Math.floor(H / rows); // 341 x 512
+  const rowH = Math.floor(H / rows);
   const out = document.createElement('canvas'); out.width = outW * cols; out.height = outH * rows;
   const ox = out.getContext('2d');
   const baseline = outH - 16;
-  for (let r = 0; r < rows; r++) for (let cc = 0; cc < cols; cc++) {
-    const x0 = Math.round(cc * W / cols), x1 = Math.round((cc + 1) * W / cols);
-    const y0 = Math.round(r * H / rows), y1 = Math.round((r + 1) * H / rows);
-    let minx = 1e9, miny = 1e9, maxx = -1, maxy = -1;
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-      if (d[idx(x, y) + 3] > 20) { if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y; }
+
+  const alpha = (x, y) => d[idx(x, y) + 3];
+  for (let r = 0; r < rows; r++) {
+    const y0 = r * rowH, y1 = (r + 1) * rowH;
+    const lab = new Int32Array(W * rowH).fill(-1);
+    const comps = [];
+    for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
+      if (alpha(x, y) <= 20) continue;
+      const li = (y - y0) * W + x; if (lab[li] !== -1) continue;
+      const q = [x, y]; lab[li] = comps.length;
+      let minx = x, maxx = x, miny = y, maxy = y, cnt = 0;
+      while (q.length) {
+        const cy = q.pop(), cx = q.pop();
+        cnt++;
+        if (cx < minx) minx = cx; if (cx > maxx) maxx = cx;
+        if (cy < miny) miny = cy; if (cy > maxy) maxy = cy;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < y0 || nx >= W || ny >= y1) continue;
+          const nl = (ny - y0) * W + nx;
+          if (lab[nl] === -1 && alpha(nx, ny) > 20) { lab[nl] = comps.length; q.push(nx, ny); }
+        }
+      }
+      comps.push({ minx, maxx, miny, maxy, cnt });
     }
-    if (maxx < 0) continue;
-    const fw = maxx - minx + 1, fh = maxy - miny + 1;
-    const dx = cc * outW + Math.round((outW - fw) / 2);
-    const dy = r * outH + Math.round(baseline - fh);
-    ox.drawImage(c, minx, miny, fw, fh, dx, dy, fw, fh);
+    // The six real figures are by far the largest blobs; take them and order L->R.
+    comps.sort((a, b) => b.cnt - a.cnt);
+    const figs = comps.slice(0, cols).sort((a, b) => a.minx - b.minx);
+    figs.forEach((f, cc) => {
+      const fw = f.maxx - f.minx + 1, fh = f.maxy - f.miny + 1;
+      const dx = cc * outW + Math.round((outW - fw) / 2);
+      const dy = r * outH + Math.round(baseline - fh);
+      ox.drawImage(c, f.minx, f.miny, fw, fh, dx, dy, fw, fh);
+    });
   }
   return out.toDataURL('image/png');
 });
