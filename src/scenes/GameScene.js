@@ -9,8 +9,8 @@ import { fallRespawn } from '../utils/respawn.js';
 // SCENE 7 — ASHOKA VATIKA (Chapter 1 tutorial)
 // A gentle side-scrolling platformer that teaches Move → Jump → Collect one
 // step at a time: a small gap, a thorn bush, a low platform, then fruit, and a
-// finish gate. Hills are a procedural parallax backdrop; thorns are drawn in
-// code (no thorn asset yet).
+// finish gate. The backdrop is the bg1 garden painting scrolling as a parallax
+// layer; thorns are drawn in code (no thorn asset yet).
 const WORLD_W = 3400;
 const GROUND_Y = GAME_HEIGHT - 150; // top surface of the ground
 
@@ -84,36 +84,18 @@ export default class GameScene extends Phaser.Scene {
     this.hud.setTime(this.timeLeft);
   }
 
-  // --- Parallax hills backdrop (procedural) ------------------------------
+  // --- Ashoka Vatika image backdrop (parallax) ---------------------------
   buildBackground() {
-    // Full-screen vertical sky gradient, pinned to the camera. Graphics
-    // fillGradientStyle guarantees full coverage (no transparent gaps).
-    const sky = this.add.graphics().setScrollFactor(0).setDepth(-100);
-    sky.fillGradientStyle(0x8fd3ff, 0x8fd3ff, 0xeaf7d8, 0xcdeaa8, 1);
-    sky.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Soft sun.
-    this.add.circle(GAME_WIDTH * 0.75, 180, 70, 0xffffff, 0.85).setScrollFactor(0.1).setDepth(-99);
-
-    // Far + near hills as wavy filled shapes across the world, at different
-    // scroll factors for parallax depth.
-    this.drawHills(GROUND_Y + 40, 0x7fb56a, 150, 320, 0.35, -90);
-    this.drawHills(GROUND_Y + 90, 0x5c9a4f, 120, 210, 0.6, -80);
-  }
-
-  drawHills(baseY, color, amplitude, wavelength, scrollFactor, depth) {
-    const g = this.add.graphics().setScrollFactor(scrollFactor).setDepth(depth);
-    g.fillStyle(color, 1);
-    g.beginPath();
-    g.moveTo(0, GAME_HEIGHT);
-    const span = WORLD_W + GAME_WIDTH;
-    for (let x = 0; x <= span; x += 20) {
-      const y = baseY - Math.abs(Math.sin(x / wavelength)) * amplitude;
-      g.lineTo(x, y);
-    }
-    g.lineTo(span, GAME_HEIGHT);
-    g.closePath();
-    g.fillPath();
+    // The garden painting (bg1) fills the portrait viewport, pinned to the
+    // camera, and scrolls slowly as a parallax layer via tilePositionX.
+    const bg = this.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'bg1')
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(-100);
+    const tex = this.textures.get('bg1').getSourceImage();
+    bg.tileScaleX = bg.tileScaleY = GAME_HEIGHT / tex.height; // fill height, keep aspect
+    this.bg = bg;
+    // A soft light wash lifts the foreground sprites off the busy painting.
+    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xf7fbe8, 0.12)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(-98);
   }
 
   // --- Ground with a gap -------------------------------------------------
@@ -377,6 +359,9 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    // Parallax: the garden backdrop drifts at a fraction of the camera speed.
+    if (this.bg) this.bg.tilePositionX = this.cameras.main.scrollX * 0.25 / this.bg.tileScaleX;
+
     if (this.finished || !this.player.alive) return;
 
     // Movement from buttons or keyboard.

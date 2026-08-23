@@ -77,26 +77,15 @@ export default class TreeScene extends Phaser.Scene {
 
   // --- Forest backdrop (procedural) --------------------------------------
   buildBackground() {
-    const sky = this.add.graphics().setScrollFactor(0).setDepth(-100);
-    sky.fillGradientStyle(0x9fd8e8, 0x9fd8e8, 0xcfeecb, 0xa9d98a, 1);
-    sky.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.add.circle(GAME_WIDTH * 0.7, 200, 70, 0xffffff, 0.7).setScrollFactor(0.1).setDepth(-99);
-
-    // Distant tree trunks + canopy bands for depth.
-    this.drawForest(0x8bc17a, 0.3, -92, 120);
-    this.drawForest(0x5f9e50, 0.55, -85, 90);
-  }
-
-  drawForest(color, scrollFactor, depth, trunkH) {
-    const g = this.add.graphics().setScrollFactor(scrollFactor).setDepth(depth);
-    const span = WORLD_W + GAME_WIDTH;
-    for (let x = 0; x <= span; x += 220) {
-      g.fillStyle(0x6b4a2a, 0.5);
-      g.fillRect(x, GROUND_Y - trunkH, 34, trunkH + 200);
-      g.fillStyle(color, 1);
-      g.fillCircle(x + 17, GROUND_Y - trunkH, 120);
-      g.fillCircle(x + 90, GROUND_Y - trunkH + 30, 90);
-    }
+    // The temple-garden painting (bg2) fills the portrait viewport and scrolls
+    // slowly as a parallax layer.
+    const bg = this.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'bg2')
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(-100);
+    const tex = this.textures.get('bg2').getSourceImage();
+    bg.tileScaleX = bg.tileScaleY = GAME_HEIGHT / tex.height;
+    this.bg = bg;
+    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0xf7fbe8, 0.12)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(-98);
   }
 
   // --- Ground floor at the start -----------------------------------------
@@ -268,6 +257,8 @@ export default class TreeScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    if (this.bg) this.bg.tilePositionX = this.cameras.main.scrollX * 0.25 / this.bg.tileScaleX;
+
     if (this.finished || !this.player.alive) return;
 
     // Re-sync moving branch bodies to their drifting visuals, and carry a rider.

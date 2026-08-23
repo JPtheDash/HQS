@@ -41,6 +41,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('boulder', 'assets/game/boulder.png');
     this.load.image('finish-gate', 'assets/game/finish-gate.png');
     this.load.image('herb', 'assets/game/herb.png');
+    this.load.image('bg1', 'assets/game/bg1.png');   // Ashoka Vatika garden backdrop
+    this.load.image('bg2', 'assets/game/bg2.png');   // temple-garden backdrop
 
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');
