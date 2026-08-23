@@ -44,6 +44,9 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('bg1', 'assets/game/bg1.png');   // Ashoka Vatika garden backdrop
     this.load.image('bg2', 'assets/game/bg2.png');   // temple-garden backdrop
     this.load.image('fire', 'assets/game/fire.png'); // flame hazard sprite
+    this.load.spritesheet('bat', 'assets/game/bat.png', { frameWidth: 453, frameHeight: 448 });
+    this.load.spritesheet('fireball', 'assets/game/fireball.png', { frameWidth: 559, frameHeight: 401 });
+    this.load.image('gada', 'assets/game/gada.png'); // thrown mace projectile
 
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');

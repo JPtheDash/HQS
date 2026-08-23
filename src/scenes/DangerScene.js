@@ -41,6 +41,13 @@ export default class DangerScene extends Phaser.Scene {
     this.boulders = this.physics.add.group();
     this.pickups = this.physics.add.group({ allowGravity: false, immovable: true });
 
+    // Combat groups: fire-bats, their fireballs, and Hanuman's thrown gadas.
+    this.registerCombatAnims();
+    this.bats = this.physics.add.group({ allowGravity: false });
+    this.fireballs = this.physics.add.group({ allowGravity: false });
+    this.gadas = this.physics.add.group({ allowGravity: false });
+    this.gadaCooldown = 0;
+
     this.buildGround();
     this.buildThorns([760, 880, 1000]);
     this.buildFires([2500, 2760, 3020]);
@@ -54,6 +61,10 @@ export default class DangerScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.hazards, this.onHazard, (pl, hz) => hz.active !== false, this);
     this.physics.add.overlap(this.player, this.boulders, this.onHazard, null, this);
     this.physics.add.overlap(this.player, this.pickups, this.onCollect, null, this);
+    // Fireball hits Hanuman; gada kills bats and neutralizes fireballs.
+    this.physics.add.overlap(this.player, this.fireballs, this.onFireballHit, null, this);
+    this.physics.add.overlap(this.gadas, this.bats, this.onGadaBat, null, this);
+    this.physics.add.overlap(this.gadas, this.fireballs, this.onGadaFireball, null, this);
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.cameras.main.setFollowOffset(-80, 60);
@@ -78,6 +89,13 @@ export default class DangerScene extends Phaser.Scene {
     });
     // Fire flicker toggle.
     this.time.addEvent({ delay: 1100, loop: true, callback: () => this.toggleFires() });
+    // Fire-bats swoop in through the middle+late stretch and lob fireballs.
+    this.time.addEvent({
+      delay: 1900, loop: true, callback: () => {
+        if (this.finished) return;
+        if (this.player.x > 1200 && this.player.x < 3200 && this.bats.countActive(true) < 4) this.spawnBat();
+      }
+    });
     // Countdown.
     this.time.addEvent({
       delay: 1000, loop: true, callback: () => {
@@ -178,6 +196,129 @@ export default class DangerScene extends Phaser.Scene {
     b.setDepth(2);
   }
 
+  // --- Fire-bats, fireballs, thrown gada --------------------------------
+  registerCombatAnims() {
+    const a = this.anims;
+    if (!a.exists('bat-fly')) a.create({ key: 'bat-fly', frames: a.generateFrameNumbers('bat', { frames: [0, 1, 2, 3, 4, 5] }), frameRate: 12, repeat: -1 });
+    if (!a.exists('bat-throw')) a.create({ key: 'bat-throw', frames: a.generateFrameNumbers('bat', { frames: [6, 7, 8, 9, 10, 11] }), frameRate: 12, repeat: 0 });
+    if (!a.exists('bat-death')) a.create({ key: 'bat-death', frames: a.generateFrameNumbers('bat', { frames: [12, 13, 14, 15, 16, 17] }), frameRate: 12, repeat: 0 });
+    if (!a.exists('fireball-spin')) a.create({ key: 'fireball-spin', frames: a.generateFrameNumbers('fireball', { frames: [0, 1, 2, 3] }), frameRate: 14, repeat: -1 });
+  }
+
+  spawnBat() {
+    const x = this.cameras.main.scrollX + GAME_WIDTH + 80;
+    const y = Phaser.Math.Between(GROUND_Y - 560, GROUND_Y - 260);
+    const bat = this.bats.create(x, y, 'bat');
+    bat.setScale(120 / bat.height);
+    bat.body.setSize(bat.width * 0.5, bat.height * 0.5);
+    bat.setDepth(7);
+    bat.alive = true;
+    bat.baseY = y;
+    bat.play('bat-fly');
+    bat.setVelocityX(Phaser.Math.Between(-70, -40));
+    // Gentle vertical bob.
+    this.tweens.add({ targets: bat, y: y + 40, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // Periodically hurl a fireball at Hanuman while on screen and ahead of him.
+    bat.throwTimer = this.time.addEvent({
+      delay: Phaser.Math.Between(1400, 2200), loop: true, callback: () => {
+        if (this.finished || !bat.active || !bat.alive) return;
+        if (bat.x > this.player.x + 40 && bat.x < this.cameras.main.scrollX + GAME_WIDTH) this.batThrow(bat);
+      }
+    });
+  }
+
+  batThrow(bat) {
+    bat.play('bat-throw');
+    bat.once('animationcomplete-bat-throw', () => { if (bat.active && bat.alive) bat.play('bat-fly'); });
+    this.time.delayedCall(280, () => {
+      if (!bat.active || !bat.alive || this.finished) return;
+      this.spawnFireball(bat.x - bat.displayWidth * 0.35, bat.y, this.player.x, this.player.y - 40);
+    });
+  }
+
+  spawnFireball(x, y, tx, ty) {
+    const fb = this.fireballs.create(x, y, 'fireball');
+    fb.setScale(70 / fb.height);
+    fb.body.setSize(fb.width * 0.5, fb.height * 0.5);
+    fb.setDepth(6);
+    fb.play('fireball-spin');
+    const ang = Math.atan2(ty - y, tx - x);
+    const speed = 320;
+    fb.setVelocity(Math.cos(ang) * speed, Math.sin(ang) * speed);
+    fb.setFlipX(Math.cos(ang) < 0); // art travels right by default; flip for leftward
+    fb.rotation = ang + (Math.cos(ang) < 0 ? Math.PI : 0);
+  }
+
+  autoThrowGada() {
+    if (this.finished || !this.player.alive || this.player.throwing) return;
+    if (this.time.now < this.gadaCooldown) return;
+    // Nearest live bat that is ahead of Hanuman and within range.
+    let target = null, best = 720 * 720;
+    this.bats.children.iterate((b) => {
+      if (!b || !b.active || !b.alive) return;
+      if (b.x < this.player.x - 20) return;
+      const dx = b.x - this.player.x, dy = b.y - this.player.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < best) { best = d2; target = b; }
+    });
+    if (!target) return;
+    this.gadaCooldown = this.time.now + 850;
+    const tx = target.x, ty = target.y;
+    this.player.throwGada(() => this.spawnGada(tx, ty));
+  }
+
+  spawnGada(tx, ty) {
+    if (this.finished) return;
+    const px = this.player.x + 30, py = this.player.y - 20;
+    const g = this.gadas.create(px, py, 'gada');
+    g.setScale(64 / g.height);
+    g.body.setSize(g.width * 0.6, g.height * 0.6);
+    g.setDepth(8);
+    const ang = Math.atan2(ty - py, tx - px);
+    const speed = 620;
+    g.setVelocity(Math.cos(ang) * speed, Math.sin(ang) * speed);
+    g.setAngularVelocity(720);
+    // Despawn after its flight so one throw can clear a bat and a fireball en route.
+    this.time.delayedCall(1400, () => { if (g.active) g.destroy(); });
+  }
+
+  onFireballHit(player, fb) {
+    if (this.time.now < this.invincibleUntil || this.finished) return;
+    this.puffAt(fb.x, fb.y);
+    fb.destroy();
+    this.onHazard(player, null);
+  }
+
+  onGadaBat(gada, bat) {
+    if (!bat.alive) return;
+    this.killBat(bat);
+    this.cameras.main.shake(120, 0.006);
+  }
+
+  onGadaFireball(gada, fb) {
+    this.puffAt(fb.x, fb.y);
+    fb.destroy();
+  }
+
+  killBat(bat) {
+    bat.alive = false;
+    bat.setVelocity(0, 0);
+    if (bat.body) bat.body.enable = false;
+    if (bat.throwTimer) bat.throwTimer.remove();
+    this.tweens.killTweensOf(bat);
+    bat.play('bat-death');
+    bat.once('animationcomplete-bat-death', () => bat.destroy());
+    // Reward.
+    this.coinsCollected += 2;
+    this.registry.set('coinTotal', (this.registry.get('coinTotal') || 0) + 2);
+    this.floatText(bat.x, bat.y - 40, '+2', '#ffe9a8');
+  }
+
+  puffAt(x, y) {
+    const p = this.add.circle(x, y, 10, 0xffd23b, 0.9).setDepth(9);
+    this.tweens.add({ targets: p, scale: 3, alpha: 0, duration: 260, onComplete: () => p.destroy() });
+  }
+
   buildCollectibles() {
     [[500, 'coins', 'coin'], [1200, 'banana', 'food'], [2200, 'coins', 'coin'], [3200, 'mango', 'food']]
       .forEach(([x, key, kind]) => this.addPickup(x, GROUND_Y - 210, key, kind === 'coin' ? 46 : 64, kind));
@@ -235,6 +376,7 @@ export default class DangerScene extends Phaser.Scene {
   buildSigns() {
     this.sign(500, GROUND_Y - 300, 'Danger ahead —\navoid the thorns!');
     this.sign(1500, GROUND_Y - 320, 'Rolling boulders!\nJUMP over them');
+    this.sign(1950, GROUND_Y - 360, 'Fire-bats! Hanuman\nhurls his gada at them');
     this.sign(2500, GROUND_Y - 300, 'Fire! Cross when\nthe flames die down');
   }
 
@@ -289,6 +431,16 @@ export default class DangerScene extends Phaser.Scene {
     // Clean up boulders that rolled past.
     this.boulders.children.iterate((b) => {
       if (b && b.x < this.cameras.main.scrollX - 120) b.destroy();
+    });
+
+    // Combat: auto-throw the gada at the nearest bat, keep fireballs oriented,
+    // and cull anything that has drifted off the world.
+    this.autoThrowGada();
+    const leftEdge = this.cameras.main.scrollX - 200;
+    this.bats.children.iterate((b) => { if (b && b.alive && b.x < leftEdge) { if (b.throwTimer) b.throwTimer.remove(); b.destroy(); } });
+    this.fireballs.children.iterate((f) => {
+      if (!f) return;
+      if (f.x < leftEdge || f.x > this.cameras.main.scrollX + GAME_WIDTH + 200 || f.y > GAME_HEIGHT + 100 || f.y < -100) f.destroy();
     });
 
     if (this.player.y > GAME_HEIGHT + 100) fallRespawn(this);

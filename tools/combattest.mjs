@@ -1,0 +1,23 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
+const p = await b.newPage({ viewport: { width: 420, height: 740 } });
+const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type()==='error') errs.push('C:'+m.text()); });
+await p.addInitScript(() => { window.__NOAUDIO = true; });
+await p.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(1500);
+await p.evaluate(() => { window.game.scene.getScenes(true).forEach(s=>{if(s.scene.key!=='DangerScene')s.scene.stop();}); window.game.scene.start('DangerScene'); });
+await p.waitForTimeout(2000);
+// Teleport player AND snap the camera so bats spawn ahead, then place a bat in range.
+await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); s.invincibleUntil=1e12; s.player.x=1700; s.player.body.reset(1700, s.player.y); s.cameras.main.scrollX = 1700-360; });
+await p.waitForTimeout(300);
+await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); s.spawnBat(); });
+await p.waitForTimeout(500);
+let st1 = await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); const bt=s.bats.getChildren()[0]; return {bats:s.bats.countActive(true), batX: bt&&Math.round(bt.x), playerX:Math.round(s.player.x), fb:s.fireballs.countActive(true), gadas:s.gadas.countActive(true)}; });
+await p.screenshot({ path: 'tools/combat1.png' });
+await p.waitForTimeout(3500);
+let st2 = await p.evaluate(() => { const s=window.game.scene.getScene('DangerScene'); return {bats:s.bats.countActive(true), fb:s.fireballs.countActive(true), gadas:s.gadas.countActive(true), coins:s.coinsCollected}; });
+await p.screenshot({ path: 'tools/combat2.png' });
+console.log('t1:', JSON.stringify(st1));
+console.log('t2:', JSON.stringify(st2), '(coins>0 => a bat was killed by gada)');
+console.log('errs', errs.length?errs.slice(0,8):'none');
+await b.close();
