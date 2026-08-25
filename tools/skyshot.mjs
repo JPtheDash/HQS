@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
+const p = await b.newPage({ viewport: { width: 420, height: 740 } });
+const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type()==='error') errs.push('C:'+m.text()); });
+await p.addInitScript(() => { window.__NOAUDIO = true; });
+await p.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(1800);
+await p.evaluate(() => { window.game.scene.getScenes(true).forEach(s=>{if(s.scene.key!=='SkyScene')s.scene.stop();}); window.game.scene.start('SkyScene'); });
+await p.waitForTimeout(2500);
+await p.screenshot({ path: 'tools/sky_a.png' });
+const info = await p.evaluate(() => { const s=window.game.scene.getScene('SkyScene'); return {solids:s.solids.getLength(), pickups:s.pickups.countActive(true), hazards:s.hazards.getLength(), onGround:s.player.body.blocked.down, py:Math.round(s.player.y)}; });
+await p.evaluate(() => { const s=window.game.scene.getScene('SkyScene'); s.player.x=1050; s.player.body.reset(1050, 780); s.cameras.main.scrollX=1050-360; });
+await p.waitForTimeout(900);
+await p.screenshot({ path: 'tools/sky_b.png' });
+console.log('info', JSON.stringify(info));
+console.log('errs', errs.length?errs.slice(0,8):'none');
+await b.close();

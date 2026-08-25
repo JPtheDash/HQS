@@ -10,6 +10,7 @@ import TreeScene from './scenes/TreeScene.js';
 import DangerScene from './scenes/DangerScene.js';
 import TiredScene from './scenes/TiredScene.js';
 import FruitForestScene from './scenes/FruitForestScene.js';
+import SkyScene from './scenes/SkyScene.js';
 
 // One game config, kept small on purpose. New scenes get added to the
 // `scene` array below in the order they should be registered (the first
@@ -37,7 +38,7 @@ const config = {
       debug: false
     }
   },
-  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene, GameScene, TreeScene, DangerScene, TiredScene, FruitForestScene]
+  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene, GameScene, TreeScene, DangerScene, TiredScene, FruitForestScene, SkyScene]
 };
 
 // Exposed so headless preview tooling (tools/shot.mjs) can jump straight to a

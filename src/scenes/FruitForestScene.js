@@ -247,8 +247,7 @@ export default class FruitForestScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    // TODO: chain to Scene 12 (Sky) once built; returns to menu for now.
-    this.showEndCard('Rested & ready!', 'Tap to continue', '#ffe9a8', false, 'HomeScene');
+    this.showEndCard('Rested & ready!', 'Tap to fly', '#ffe9a8', false, 'SkyScene');
   }
 
   loseLevel(reason) {
