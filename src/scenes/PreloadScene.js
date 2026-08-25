@@ -56,6 +56,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('bgmountain', 'assets/game/bg-mountain.png');
     this.load.image('bgdronagiri', 'assets/game/bg-dronagiri.png');
     this.load.image('bgdawn', 'assets/game/bg-dawnsky.png');
+    this.load.image('bglanka', 'assets/cinematic/scene2.png'); // Lanka battlefield (finale)
     this.load.spritesheet('bat', 'assets/game/bat.png', { frameWidth: 453, frameHeight: 448 });
     this.load.spritesheet('fireball', 'assets/game/fireball.png', { frameWidth: 559, frameHeight: 401 });
     this.load.image('gada', 'assets/game/gada.png'); // thrown mace projectile

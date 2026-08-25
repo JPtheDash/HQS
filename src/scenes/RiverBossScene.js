@@ -257,8 +257,7 @@ export default class RiverBossScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    // TODO: chain to Scene 25/26 (Dawn countdown / Dronagiri) once built.
-    this.showEndCard('The path opens!', 'Tap to continue', '#bfeaff', false, 'HomeScene');
+    this.showEndCard('The path opens!', 'Tap to continue', '#bfeaff', false, 'DronagiriScene');
   }
 
   loseLevel(reason) {
