@@ -45,6 +45,17 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('bg1', 'assets/game/bg1.png');   // Ashoka Vatika garden backdrop
     this.load.image('bg2', 'assets/game/bg2.png');   // temple-garden backdrop
     this.load.image('fire', 'assets/game/fire.png'); // flame hazard sprite
+    // ---- Chapter 2+ biome backdrops (2:1 parallax paintings) ---------
+    this.load.image('bgfruit', 'assets/game/bg-fruitforest.png');
+    this.load.image('bgsky', 'assets/game/bg-sky.png');
+    this.load.image('bgstorm', 'assets/game/bg-storm.png');
+    this.load.image('bgmagic', 'assets/game/bg-magicforest.png');
+    this.load.image('bgdark', 'assets/game/bg-darkforest.png');
+    this.load.image('bgriver', 'assets/game/bg-river.png');
+    this.load.image('bgriverboss', 'assets/game/bg-riverboss.png');
+    this.load.image('bgmountain', 'assets/game/bg-mountain.png');
+    this.load.image('bgdronagiri', 'assets/game/bg-dronagiri.png');
+    this.load.image('bgdawn', 'assets/game/bg-dawnsky.png');
     this.load.spritesheet('bat', 'assets/game/bat.png', { frameWidth: 453, frameHeight: 448 });
     this.load.spritesheet('fireball', 'assets/game/fireball.png', { frameWidth: 559, frameHeight: 401 });
     this.load.image('gada', 'assets/game/gada.png'); // thrown mace projectile
