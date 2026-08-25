@@ -297,8 +297,7 @@ export default class StormScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    // TODO: chain to Scene 15/16 (Magical Forest) once built.
-    this.showEndCard('Through the storm!', 'Tap to continue', '#ffe9a8', false, 'HomeScene');
+    this.showEndCard('Through the storm!', 'Tap to continue', '#ffe9a8', false, 'MagicForestScene');
   }
 
   loseLevel(reason) {
