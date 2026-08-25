@@ -1,0 +1,235 @@
+================================================================================
+HANUMAN: QUEST FOR SANJEEVINI  —  ASSET GENERATION PROMPTS
+Backgrounds + enemies + props for Scenes 11–35
+================================================================================
+
+HOW TO USE
+- Paste one prompt at a time into your image generator (Midjourney / DALL·E /
+  SDXL / Leonardo, etc.).
+- Keep the STYLE line identical across everything so the whole game looks like
+  one world.
+- BACKGROUNDS: landscape ~2:1 (e.g. 1774x896 or 2048x1024). They scroll as a
+  parallax layer, so the bottom ~15% is hidden behind the ground — don't put
+  anything important there. No characters in backgrounds.
+- SPRITES (enemies/props): plain flat background is fine — a grey/dark
+  checkerboard, solid magenta, or real transparency. My tools strip checker/solid
+  backgrounds automatically, so don't worry about perfect alpha.
+- For animated enemies, ask for a GRID sprite sheet (rows = actions) exactly like
+  the bat sheet, all frames the SAME size, character CENTERED in each cell,
+  facing LEFT (they move toward Hanuman, who faces right — I can flip in code).
+
+--------------------------------------------------------------------------------
+SHARED STYLE LINE  (paste into every prompt)
+--------------------------------------------------------------------------------
+STYLE: premium 2.5D mobile game art, Disney/Pixar-inspired Indian mythology,
+vibrant saturated colors, cinematic soft volumetric lighting, thick clean
+outlines, cel-shaded, high detail, magical glowing accents. Hand-painted
+storybook look.
+
+SHARED NEGATIVE (for backgrounds): characters, people, animals, text,
+watermark, logo, UI, health bars, frame border, split panels, blurry.
+
+================================================================================
+PART 1 — BACKGROUNDS  (one per environment)
+================================================================================
+
+--------------------------------------------------------------------------------
+BG: FRUIT FOREST   (Scene 11 — peaceful rest area)   file: bg-fruitforest.png
+--------------------------------------------------------------------------------
+[STYLE] A lush peaceful Indian jungle clearing in warm daylight: heavy mango and
+banana trees dripping with ripe fruit, coconut palms, blooming flowers, a small
+gentle waterfall on the right feeding a clear pond, dappled sunlight through the
+canopy, butterflies and floating pollen motes, soft green depth fading into
+misty background trees. Calm, restful, inviting. Landscape 2:1 composition, empty
+foreground floor area, no characters.
+NEGATIVE: (shared) + danger, fire, darkness, enemies.
+
+--------------------------------------------------------------------------------
+BG: SKY / CLOUD REALM   (Scenes 12–13 — first flight)   file: bg-sky.png
+--------------------------------------------------------------------------------
+[STYLE] A breathtaking golden-blue sky high above the world: enormous soft
+volumetric cumulus clouds, warm sunlight, distant blue Himalayan mountain peaks
+far below through gaps in the cloud, a few floating mossy rocks, birds as tiny
+silhouettes, god-rays, dreamy and vast. Bright and hopeful. Landscape 2:1, open
+airy composition, no characters.
+NEGATIVE: (shared) + ground, forest, storm, darkness.
+
+--------------------------------------------------------------------------------
+BG: STORM SKY   (Scene 14 — fly through the storm)   file: bg-storm.png
+--------------------------------------------------------------------------------
+[STYLE] A dramatic dark storm high in the sky: massive churning charcoal-purple
+thunderclouds, sheets of rain, forked lightning glowing electric blue-white,
+wind-torn cloud wisps, ominous but epic, cold blue rim light. Sense of raging
+nature. Landscape 2:1, turbulent composition, no characters.
+NEGATIVE: (shared) + calm, sunny, forest, ground.
+
+--------------------------------------------------------------------------------
+BG: MAGICAL FOREST   (Scenes 15–16 — mysterious dusk)  file: bg-magicforest.png
+--------------------------------------------------------------------------------
+[STYLE] A mystical twilight forest glowing with magic: bioluminescent blue and
+teal plants, drifting fireflies, ancient moss-covered temple ruins and carved
+stones, floating golden particles, soft god-rays through tall dark trees, a
+faint magical mist. Enchanting, calm, slightly mysterious. Landscape 2:1, empty
+foreground floor, no characters.
+NEGATIVE: (shared) + bright daylight, fire, modern objects.
+
+--------------------------------------------------------------------------------
+BG: DARK FOREST PATH   (Scenes 17–18 — rakshasa chase) file: bg-darkforest.png
+--------------------------------------------------------------------------------
+[STYLE] A tense shadowy jungle path at dusk: dense dark trees, twisted roots,
+low red-orange embers and faint firelight glow in the distance, thick
+atmosphere, shafts of dim light, foreboding mood. Dangerous but not horror.
+Landscape 2:1, clear foreground running lane, no characters.
+NEGATIVE: (shared) + bright, cheerful, snow, water.
+
+--------------------------------------------------------------------------------
+BG: RIVER CROSSING   (Scenes 21–22)   file: bg-river.png
+--------------------------------------------------------------------------------
+[STYLE] A wide misty sacred river through jungle: rushing turquoise water, wet
+mossy boulders, tall reeds and lotus pads, hanging vines from huge overhanging
+trees, a large waterfall in the background, drifting mist and light spray,
+morning light. Serene but with moving water. Landscape 2:1, water spanning the
+lower area, no characters.
+NEGATIVE: (shared) + desert, snow, fire, city.
+
+--------------------------------------------------------------------------------
+BG: RIVER BOSS ARENA   (Scenes 23–24)   file: bg-riverboss.png
+--------------------------------------------------------------------------------
+[STYLE] A turbulent stormy stretch of the sacred river: churning white-capped
+rapids, dark swirling water, jagged wet rocks, spray and mist, dramatic cloudy
+sky, an ominous deep-green glow beneath the surface hinting at a guardian.
+Tense boss-arena mood. Landscape 2:1, wide open water for a large enemy, no
+characters.
+NEGATIVE: (shared) + calm water, sunny, forest interior.
+
+--------------------------------------------------------------------------------
+BG: HIMALAYAN MOUNTAIN PASS   (Scenes 19–20)   file: bg-mountain.png
+--------------------------------------------------------------------------------
+[STYLE] A vast snowy Himalayan mountain pass: towering snow-capped peaks, grey
+rocky cliffs and narrow ledges, frozen waterfalls, drifting snow and clouds,
+crisp cold blue-white light, distant prayer-flag hints. Majestic and cold.
+Landscape 2:1, rocky ledges suggested, empty foreground, no characters.
+NEGATIVE: (shared) + jungle, warm colors, water river.
+
+--------------------------------------------------------------------------------
+BG: DRONAGIRI   (Scene 26 — the sacred herb mountain)  file: bg-dronagiri.png
+--------------------------------------------------------------------------------
+[STYLE] The most beautiful mystical Himalayan peak at night: a giant
+snow-covered glowing mountain, luminous green-golden sacred herbs scattered on
+the slopes, magical mist, shimmering waterfalls, a sky full of stars and aurora,
+ancient carved stones, ethereal divine light. Awe-inspiring, sacred, magical.
+Landscape 2:1, grand reveal composition, no characters.
+NEGATIVE: (shared) + daylight, jungle, city, plain rock.
+
+--------------------------------------------------------------------------------
+BG: LANKA BATTLEFIELD (NIGHT)   (Scenes 32–34 — return) file: bg-lanka.png
+--------------------------------------------------------------------------------
+[STYLE] The nighttime battlefield outside golden Lanka: distant burning golden
+palace architecture, smoke and drifting embers, torches, a dark battle-scarred
+field under a deep night sky turning faintly toward dawn on the horizon.
+Somber, epic, cinematic. Landscape 2:1, open ground foreground, no characters.
+NEGATIVE: (shared) + daytime, jungle, snow, gore, blood.
+
+--------------------------------------------------------------------------------
+BG: DAWN SKY (RETURN FLIGHT)   (Scenes 30–31)   file: bg-dawnsky.png
+--------------------------------------------------------------------------------
+[STYLE] A sweeping sky at dawn, gradient from deep night-purple at the top to
+orange and pink sunrise at the horizon: soft clouds catching first light,
+distant mountains below, a few stars fading, warm hopeful glow, sense of racing
+the sunrise. Landscape 2:1, open airy composition, no characters.
+NEGATIVE: (shared) + full daylight, storm, forest, ground.
+
+================================================================================
+PART 2 — ENEMIES & BOSSES  (grid sprite sheets, like the bat)
+================================================================================
+
+--------------------------------------------------------------------------------
+RAKSHASA (ground demon enemy)   file: rakshasa.png
+--------------------------------------------------------------------------------
+[STYLE] Sprite sheet of a cartoon rakshasa demon foot-soldier, chibi
+proportions: green-grey muscular skin, small horns, fangs, simple armor and a
+club, fierce but not gory, cute-menacing. SIDE-VIEW PROFILE, facing LEFT in
+every frame, same design throughout, centered in each equal cell.
+Grid 6 columns x 3 rows:
+  Row 1 — WALK: 6 frames, a walking cycle.
+  Row 2 — ATTACK: 6 frames, swinging its club forward.
+  Row 3 — DEATH: 6 frames, hit, stagger, and poof into smoke, fading out.
+Plain flat/checker background, no ground, no shadow, no text.
+NEGATIVE: front view, facing right, gore, blood, background scenery, text,
+watermark, extra characters, inconsistent design.
+
+--------------------------------------------------------------------------------
+FLYING RAKSHASA / GIANT BIRD (sky enemy)   file: skyenemy.png
+--------------------------------------------------------------------------------
+[STYLE] Sprite sheet of a menacing flying creature (giant dark bird or winged
+rakshasa), chibi cartoon, glowing eyes, big wings. SIDE-VIEW PROFILE, facing
+LEFT, same design throughout, centered in each equal cell.
+Grid 6 columns x 2 rows:
+  Row 1 — FLY: 6 frames, wing-flap loop.
+  Row 2 — DEATH: 6 frames, struck and bursting into feathers/smoke, fading out.
+Plain flat/checker background, no ground, no shadow, no text.
+NEGATIVE: front view, facing right, background, text, watermark, extra creatures.
+
+--------------------------------------------------------------------------------
+RIVER GUARDIAN (boss)   file: riverboss.png
+--------------------------------------------------------------------------------
+[STYLE] A large mythological river-guardian boss, chibi-epic cartoon: a
+serpentine water-naga / makara made of turquoise water and scales, glowing eyes,
+crown of coral, majestic and huge. SIDE-VIEW facing LEFT, same design, centered
+in each equal cell.
+Grid 4 columns x 3 rows (LARGE cells):
+  Row 1 — IDLE: 4 frames, rising/swaying in the water.
+  Row 2 — ATTACK: 4 frames, rearing back and lunging / spitting a water blast.
+  Row 3 — HURT: 4 frames, recoiling when hit, then a defeated slump on the last.
+Plain flat/checker background, no ground, no text.
+NEGATIVE: front view, facing right, realistic, gore, background scenery, text,
+watermark.
+
+================================================================================
+PART 3 — PROPS & COLLECTIBLES  (single images or tiny sheets)
+================================================================================
+All on a plain flat/checker/transparent background, one object centered, no text,
+no shadow. Same STYLE line.
+
+- HONEYCOMB            file: honeycomb.png   — a golden dripping honeycomb with a
+                        glossy honey sheen (energy pickup).
+- LOTUS FLOWER         file: lotus.png       — a glowing pink-and-gold divine
+                        lotus, softly luminous (collectible).
+- SACRED GEM           file: gem.png         — a faceted glowing blue/purple
+                        divine gem sparkling (collectible).
+- HERB (Sanjeevini)    file: herb-glow.png   — a small luminous green-gold sacred
+                        herb sprig with soft glow (health / final goal).
+- BLESSING ORB         file: blessing.png    — a radiant golden divine orb / Om
+                        symbol with light rays (power-up: flight/invincibility).
+- CLOUD PLATFORM       file: cloud.png       — a fluffy solid horizontal cloud
+                        you can stand on, flat top, soft round bottom.
+- FLOATING ROCK        file: floatrock.png   — a chunky mossy floating boulder
+                        platform with a flat top, roots/crystals underneath.
+- SNOW LEDGE           file: snowledge.png   — a chunky snow-capped rock ledge
+                        platform (~2:1), grey rock with snow on top, flat top.
+- HANGING VINE         file: vine.png        — a long green jungle vine with
+                        leaves, hanging vertically, for swinging.
+- STORM CLOUD (hazard) file: stormcloud.png  — a dark crackling cloud with a
+                        small lightning bolt, menacing (sky hazard).
+- LIGHTNING BOLT       file: bolt.png        — a bright jagged electric-blue
+                        lightning bolt, vertical (sky hazard).
+- FALLING ROCK         file: fallrock.png    — a sharp grey boulder chunk for
+                        falling-rock hazards (mountain).
+
+================================================================================
+PRIORITY ORDER (what unblocks the most gameplay first)
+================================================================================
+1. bg-fruitforest.png            -> Scene 11 (I can build now with existing art)
+2. bg-sky.png + cloud.png + floatrock.png   -> Scenes 12–13 flying
+3. bg-storm.png + stormcloud.png + bolt.png -> Scene 14 storm
+4. bg-magicforest.png + herb-glow.png       -> Scenes 15–16
+5. rakshasa.png + bg-darkforest.png         -> Scenes 17–18
+6. bg-river.png + vine.png                  -> Scenes 21–22
+7. riverboss.png + bg-riverboss.png         -> Scenes 23–24
+8. bg-mountain.png + snowledge.png + fallrock.png -> Scenes 19–20
+9. bg-dronagiri.png + herb-glow.png         -> Scene 26–29
+10. bg-dawnsky.png + bg-lanka.png           -> Scenes 30–34 finale
+
+Save each into your Downloads folder with the suggested filename and tell me
+which ones are ready — I'll bake/clean them and build the matching scenes.
+================================================================================
