@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ args: ['--disable-background-timer-throttling'] });
+const ctx = await b.newContext({ viewport: { width: 420, height: 740 } });
+const p = await ctx.newPage();
+const errs = []; p.on('pageerror', e => errs.push(e.message));
+await p.addInitScript(() => { window.__NOAUDIO = true; });
+await p.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(2000);
+await p.evaluate(() => { window.game.scene.getScenes(true).forEach(s=>{if(s.scene.key!=='RakshasaScene')s.scene.stop();}); window.game.scene.start('RakshasaScene'); });
+await p.waitForTimeout(3000);
+await p.evaluate(() => { const s=window.game.scene.getScene('RakshasaScene'); s.time.removeAllEvents(); s.foes.clear(true,true); s.player.x=1000; s.player.body.reset(1000,s.player.y); s.cameras.main.scrollX=640; s.spawnFoe(1300,false); s.gadaCooldown=0; s.coinsCollected=0; s.throwGadaSwipe(); });
+await p.waitForTimeout(4500);
+const st = await p.evaluate(() => { const s=window.game.scene.getScene('RakshasaScene'); return {foes:s.foes.countActive(true), coins:s.coinsCollected}; });
+console.log('foe defeated test ->', JSON.stringify(st), '(foes=0 & coins=3 => success)');
+console.log('errs', errs.length?errs.slice(0,5):'none');
+await b.close();

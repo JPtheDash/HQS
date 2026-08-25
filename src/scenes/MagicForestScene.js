@@ -230,8 +230,7 @@ export default class MagicForestScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    // TODO: chain to Scene 17-18 (Rakshasa) once built.
-    this.showEndCard('Rested in the grove', 'Tap to continue', '#bfffe0', false, 'HomeScene');
+    this.showEndCard('Rested in the grove', 'Tap to continue', '#bfffe0', false, 'RakshasaScene');
   }
 
   loseLevel(reason) {
