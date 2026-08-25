@@ -60,6 +60,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('fireball', 'assets/game/fireball.png', { frameWidth: 559, frameHeight: 401 });
     this.load.image('gada', 'assets/game/gada.png'); // thrown mace projectile
     this.load.image('rakshasa', 'assets/game/rakshasa.png'); // demon enemy
+    this.load.image('boss', 'assets/game/boss.png'); // river guardian boss
 
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');

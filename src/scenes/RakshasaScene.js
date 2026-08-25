@@ -288,8 +288,7 @@ export default class RakshasaScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    // TODO: chain to Scene 19 (Mountain Pass) once built.
-    this.showEndCard('Escaped the demons!', 'Tap to continue', '#ffe9a8', false, 'HomeScene');
+    this.showEndCard('Escaped the demons!', 'Tap to continue', '#ffe9a8', false, 'MountainScene');
   }
 
   loseLevel(reason) {

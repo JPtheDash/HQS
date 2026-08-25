@@ -14,6 +14,9 @@ import SkyScene from './scenes/SkyScene.js';
 import StormScene from './scenes/StormScene.js';
 import MagicForestScene from './scenes/MagicForestScene.js';
 import RakshasaScene from './scenes/RakshasaScene.js';
+import MountainScene from './scenes/MountainScene.js';
+import RiverScene from './scenes/RiverScene.js';
+import RiverBossScene from './scenes/RiverBossScene.js';
 
 // One game config, kept small on purpose. New scenes get added to the
 // `scene` array below in the order they should be registered (the first
@@ -41,7 +44,7 @@ const config = {
       debug: false
     }
   },
-  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene, GameScene, TreeScene, DangerScene, TiredScene, FruitForestScene, SkyScene, StormScene, MagicForestScene, RakshasaScene]
+  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene, GameScene, TreeScene, DangerScene, TiredScene, FruitForestScene, SkyScene, StormScene, MagicForestScene, RakshasaScene, MountainScene, RiverScene, RiverBossScene]
 };
 
 // Exposed so headless preview tooling (tools/shot.mjs) can jump straight to a
