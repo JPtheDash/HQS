@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
-import { stripBackground } from '../utils/cleanTexture.js';
+import { stripBackground, stripCheckerGrey } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
 import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
@@ -131,7 +131,7 @@ export default class TreeScene extends Phaser.Scene {
     // the collision strip just inside the grass.
     const img = this.add.image(x, y, 'ledge-small').setOrigin(0.5, 0).setDepth(-5);
     img.setScale(w / img.width);
-    const surfaceY = y + img.displayHeight * 0.15;
+    const surfaceY = y + img.displayHeight * 0.19; // the flat grass surface
     const plank = this.add.rectangle(x, surfaceY, w * 0.9, 22);
     this.physics.add.existing(plank, true);
     plank.setVisible(false);
@@ -212,16 +212,23 @@ export default class TreeScene extends Phaser.Scene {
   }
 
   buildFinish(x, y) {
-    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 300 });
-    // A glowing herb marker to reach.
-    this.add.circle(x, y, 46, 0xffe9a8, 0.25).setDepth(-4);
+    stripCheckerGrey(this, 'herb'); // the herb art ships with a dark background
+    // A branch platform for the gate to stand on, and the gate grounded on it.
+    const branchY = y + 70;
+    this.makeBranch(x, branchY, 320, 0);
+    const surfaceY = branchY + (this.textures.get('ledge-small').getSourceImage().height * (320 / this.textures.get('ledge-small').getSourceImage().width)) * 0.19;
+    addFinishGate(this, x, surfaceY, { height: 300 });
+
+    // The Sanjeevini herb glows in the archway as the goal to reach.
+    const herbY = surfaceY - 150;
+    this.add.circle(x, herbY, 46, 0xffe9a8, 0.28).setDepth(-4);
     const herb = this.textures.exists('herb')
-      ? this.add.image(x, y, 'herb').setDepth(-3)
-      : this.add.star(x, y, 5, 14, 30, 0x6fe06f).setDepth(-3);
-    if (herb.width) herb.setScale(90 / herb.width);
-    this.tweens.add({ targets: herb, y: y - 14, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      ? this.add.image(x, herbY, 'herb').setDepth(-3)
+      : this.add.star(x, herbY, 5, 14, 30, 0x6fe06f).setDepth(-3);
+    if (herb.width) herb.setScale(84 / herb.width);
+    this.tweens.add({ targets: herb, y: herbY - 12, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: herb, angle: 8, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.finishZone = new Phaser.Geom.Rectangle(x - 50, y - 70, 100, 150);
+    this.finishZone = new Phaser.Geom.Rectangle(x - 55, surfaceY - 250, 110, 250);
   }
 
   // --- Controls (buttons + keyboard, tap=jump / hold=fly) ----------------

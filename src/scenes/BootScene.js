@@ -92,16 +92,37 @@ export default class BootScene extends Phaser.Scene {
     // Bail (keep hero6) if any core row came up short.
     if (banks[0].length < 6 || banks[1].length < 6 || banks[3].length < 6) return;
 
-    const CW = 224, CH = 188, PAD = 8;
+    // Foot row of a figure = the lowest opaque row within its central x-band, so
+    // Hanuman's long tail (off to one side, often dipping below his feet) doesn't
+    // count as the bottom. All feet align to a shared baseline and the tail is
+    // allowed to hang below it — otherwise he looked lifted off the platforms.
+    const footRow = (c) => {
+      const a = c.x + Math.floor(c.w * 0.30), b = c.x + Math.ceil(c.w * 0.70);
+      for (let y = c.y + c.h - 1; y >= c.y; y--) {
+        for (let x = a; x < b; x++) if (A(x, y) > 70) return y;
+      }
+      return c.y + c.h - 1;
+    };
+    const items = [];
+    let maxAbove = 0, maxBelow = 0;
+    banks.forEach((bank, row) => bank.forEach((c, col) => {
+      const f = footRow(c);
+      maxAbove = Math.max(maxAbove, f - c.y);          // head..feet height
+      maxBelow = Math.max(maxBelow, (c.y + c.h - 1) - f); // tail hang below feet
+      items.push({ c, row, col, foot: f });
+    }));
+    const CW = 224, PADTOP = 12, PADBOT = 6;
+    const CH = PADTOP + maxAbove + maxBelow + PADBOT;
+    const feet = PADTOP + maxAbove; // within-cell y of the feet baseline
+    const figH = maxAbove;          // head-to-feet height, for consistent scaling
+
     const out = document.createElement('canvas');
     out.width = CW * 8; out.height = CH * 5;
     const ox = out.getContext('2d');
-    banks.forEach((bank, row) => {
-      bank.forEach((c, col) => {
-        const dx = col * CW + (CW - c.w) / 2;      // centred horizontally
-        const dy = row * CH + (CH - PAD - c.h);    // feet on a shared baseline
-        ox.drawImage(cv, c.x, c.y, c.w, c.h, dx, dy, c.w, c.h);
-      });
+    items.forEach(({ c, row, col, foot }) => {
+      const dx = col * CW + (CW - c.w) / 2;            // centred horizontally
+      const dy = row * CH + feet - (foot - c.y);       // feet on the baseline
+      ox.drawImage(cv, c.x, c.y, c.w, c.h, dx, dy, c.w, c.h);
     });
 
     if (this.textures.exists('hero')) this.textures.remove('hero');
@@ -112,7 +133,7 @@ export default class BootScene extends Phaser.Scene {
       tex.add(r * 8 + cIdx, 0, cIdx * CW, r * CH, CW, CH);
     }
     this.game.registry.set('heroBaked', true);
-    this.game.registry.set('heroCell', { w: CW, h: CH, pad: PAD });
+    this.game.registry.set('heroCell', { w: CW, h: CH, feet, figH });
   }
 
   // Bake the loading-screen run cycle from the user's new hero sheet

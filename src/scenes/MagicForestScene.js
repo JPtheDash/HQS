@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
-import { stripBackground } from '../utils/cleanTexture.js';
+import { stripBackground, stripCheckerGrey } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
 import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
@@ -20,7 +20,8 @@ export default class MagicForestScene extends Phaser.Scene {
   }
 
   create() {
-    ['ground', 'banana', 'mango', 'coconut', 'herb'].forEach((k) => stripBackground(this, k));
+    ['ground', 'banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
+    stripCheckerGrey(this, 'herb'); // herb ships with a dark background
 
     this.finished = false;
     this.health = 2;      // arrives a little battered from the storm

@@ -21,8 +21,11 @@ export default class HomeScene extends Phaser.Scene {
     this.buildPlayButton();
     this.buildIconButtons();
 
-    // Story track for the menu (and all non-gameplay screens).
+    // Story track for the menu (and all non-gameplay screens). Music defaults ON
+    // (audible) unless the player has turned it off; apply that choice cleanly.
     playMusic(this, STORY_MUSIC, { volume: 0.45 });
+    if (this.registry.get('musicOn') === undefined) this.registry.set('musicOn', true);
+    this.setMusicOn(this.registry.get('musicOn'));
 
     // Gentle fade-in from black on first entry.
     this.cameras.main.fadeIn(700, 0, 0, 0);
@@ -212,14 +215,36 @@ export default class HomeScene extends Phaser.Scene {
   onIcon(label) {
     if (this.modal) return; // one panel at a time
     if (label === 'SOUND') {
-      // Toggle global mute (persists across scenes via the shared sound manager).
-      this.sound.mute = !this.sound.mute;
-      this.cameras.main.flash(150, this.sound.mute ? 120 : 255, 220, 120);
-      this.floatHint(this.sound.mute ? '🔇 Sound OFF' : '🔊 Sound ON');
+      const on = this.setMusicOn(!this.isMusicOn());
+      this.cameras.main.flash(150, on ? 255 : 120, 220, 120);
+      this.floatHint(on ? '🔊 Music ON' : '🔇 Music OFF');
       return;
     }
     if (label === 'SETTINGS') this.openSettings();
     else if (label === 'STORY') this.openStory();
+  }
+
+  // Whether the background music is currently playing (audible).
+  isMusicOn() {
+    const v = this.registry.get('musicOn');
+    return v === undefined ? !this.sound.mute : v;
+  }
+
+  // Turn the music on/off by actually pausing/resuming the track (and matching
+  // the mute flag). Setting mute alone is unreliable — Phaser's mute gain never
+  // takes effect if it was set while the audio context was still locked — so we
+  // control the track directly here. Persists across scenes via the registry.
+  setMusicOn(on) {
+    this.registry.set('musicOn', on);
+    this.sound.mute = !on;
+    const bgm = this.registry.get('bgm.sound');
+    if (bgm) {
+      try {
+        if (on) { if (bgm.isPaused) bgm.resume(); }   // music.js starts it on unlock
+        else if (bgm.isPlaying) bgm.pause();
+      } catch (e) { /* ignore audio hiccups */ }
+    }
+    return on;
   }
 
   // --- Modal panel scaffold ---------------------------------------------
@@ -267,19 +292,61 @@ export default class HomeScene extends Phaser.Scene {
     return { bg, t };
   }
 
+  // Show a pre-rendered panel image (buttons baked into the art) dimmed over the
+  // menu, returning its on-screen rect so callers can drop invisible clickable
+  // hit-zones onto the baked buttons.
+  showPanelImage(key) {
+    const dim = this.add.rectangle(CENTER_X, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.66)
+      .setDepth(3000).setInteractive();
+    const img = this.add.image(CENTER_X, GAME_HEIGHT / 2, key).setDepth(3001).setInteractive(); // swallow taps on the panel body
+    const src = this.textures.get(key).getSourceImage();
+    const panelW = Math.min(GAME_WIDTH * 0.98, src.width);
+    const scale = panelW / src.width;
+    img.setScale(scale);
+    const panelH = src.height * scale;
+    this.modal = this.add.container(0, 0, [dim, img]).setDepth(3000);
+    dim.on('pointerup', () => this.closeModal()); // tapping outside the panel closes it
+    return { left: CENTER_X - panelW / 2, top: GAME_HEIGHT / 2 - panelH / 2, w: panelW, h: panelH };
+  }
+
+  // Invisible clickable rectangle over a baked button, positioned by fractions
+  // (top-left fx,fy and size fw,fh) of the panel rect. Flashes on press.
+  hitZone(p, fx, fy, fw, fh, onClick) {
+    const z = this.add.rectangle(
+      p.left + (fx + fw / 2) * p.w, p.top + (fy + fh / 2) * p.h, fw * p.w, fh * p.h, 0xffffff, 0
+    ).setDepth(3003).setInteractive({ useHandCursor: true });
+    z.on('pointerdown', () => z.setFillStyle(0xffffff, 0.16));
+    z.on('pointerout', () => z.setFillStyle(0xffffff, 0));
+    z.on('pointerup', () => { z.setFillStyle(0xffffff, 0); onClick(); });
+    this.modal.add(z);
+    return z;
+  }
+
   openSettings() {
-    const { top, addToModal } = this.openModal('SETTINGS');
-    const soundLabel = () => `Sound:  ${this.sound.mute ? 'OFF' : 'ON'}`;
-    const btn = this.panelButton(CENTER_X, top + 150, soundLabel(), (t) => {
-      this.sound.mute = !this.sound.mute;
-      t.setText(soundLabel());
+    if (this.modal) this.closeModal();
+    const p = this.showPanelImage('settings-panel');
+    // Music ON/OFF indicator over the right of the baked Music button.
+    const stateT = this.add.text(p.left + 0.71 * p.w, p.top + 0.345 * p.h,
+      this.isMusicOn() ? 'ON' : 'OFF', {
+        fontFamily: 'Georgia, serif', fontSize: '26px', color: '#3a1c00', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(3004);
+    this.modal.add(stateT);
+
+    this.hitZone(p, 0.19, 0.305, 0.62, 0.078, () => {
+      const on = this.setMusicOn(!this.isMusicOn());
+      stateT.setText(on ? 'ON' : 'OFF');
     });
-    const hint = this.add.text(CENTER_X, top + 250,
-      'Tap ▲ to JUMP\nHold ▲ to FLY\n◀ ▶ to move\nCollect fruit to restore energy', {
-        fontFamily: 'Georgia, serif', fontSize: '24px', color: '#e8d7ad',
-        align: 'center', lineSpacing: 8
-      }).setOrigin(0.5, 0).setDepth(3002);
-    addToModal(hint);
+    this.hitZone(p, 0.19, 0.430, 0.62, 0.078, () => {});               // Language (English only)
+    this.hitZone(p, 0.19, 0.555, 0.62, 0.078, () => this.openAbout()); // About
+    this.hitZone(p, 0.30, 0.795, 0.40, 0.066, () => this.closeModal()); // CLOSE
+    this.hitZone(p, 0.74, 0.125, 0.15, 0.075, () => this.closeModal()); // ✕
+  }
+
+  openAbout() {
+    if (this.modal) this.closeModal();
+    const p = this.showPanelImage('about-panel');
+    this.hitZone(p, 0.24, 0.790, 0.52, 0.072, () => this.openSettings()); // BACK → Settings
+    this.hitZone(p, 0.75, 0.130, 0.15, 0.075, () => this.closeModal());   // ✕
   }
 
   openStory() {

@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
-import { stripBackground } from '../utils/cleanTexture.js';
+import { stripBackground, stripCheckerGrey } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
 
 // SCENES 26–29 — DRONAGIRI / SANJEEVINI SEARCH / LIFT THE MOUNTAIN (Chapter 8-9)
@@ -19,7 +19,8 @@ export default class DronagiriScene extends Phaser.Scene {
   }
 
   create() {
-    ['ground', 'herb'].forEach((k) => stripBackground(this, k));
+    ['ground'].forEach((k) => stripBackground(this, k));
+    stripCheckerGrey(this, 'herb'); // herb ships with a dark background
 
     this.finished = false;
     this.health = 3;

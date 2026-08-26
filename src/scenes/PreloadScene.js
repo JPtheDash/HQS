@@ -21,6 +21,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('menu-story', 'assets/menu/story.png');
     this.load.image('menu-coinpanel', 'assets/menu/coinpanel.png');
     this.load.image('coins', 'assets/menu/coins.png');
+    this.load.image('settings-panel', 'assets/menu/settings-panel.png');
+    this.load.image('about-panel', 'assets/menu/about-panel.png');
     // NOTE: 'glow' is generated procedurally in BootScene (not loaded).
 
     // ---- Prologue cinematic (Scenes 2-6) ----------------------------

@@ -23,20 +23,24 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     Player.createAnims(scene);
 
-    // The in-game sheet is either the freshly-baked new art (8x5, 224x188 cells,
-    // registry 'heroBaked') or the original hero6 fallback (8x5, 430x372).
+    // The in-game sheet is either the freshly-baked new art (feet-aligned cells,
+    // registry 'heroBaked' + 'heroCell') or the original hero6 fallback.
     const cell = scene.game.registry.get('heroCell');
     const baked = scene.game.registry.get('heroBaked') && cell;
-    this.baseline = baked ? cell.h - cell.pad : BASELINE;
+    // Feet baseline within the cell — the body's bottom sits here so the feet
+    // land on the ground and the tail hangs below.
+    this.baseline = baked ? cell.feet : BASELINE;
 
-    const targetHeight = baked ? 250 : 230;
-    this.setScale(targetHeight / this.height);
+    // Scale so the head-to-feet figure is a consistent on-screen height,
+    // independent of the extra tail room baked into the cell.
+    if (baked) this.setScale(236 / cell.figH);
+    else this.setScale(230 / this.height);
     this.baseScaleX = this.scaleX;
     this.baseScaleY = this.scaleY;
 
-    // Slim body reaching the feet baseline so the feet sit on the ground.
+    // Slim body whose bottom reaches the feet baseline.
     const bw = this.width * 0.30;
-    const bh = this.height * 0.58;
+    const bh = baked ? cell.figH * 0.6 : this.height * 0.58;
     this.body.setSize(bw, bh);
     this.body.setOffset((this.width - bw) / 2, this.baseline - bh);
     this.setCollideWorldBounds(true);
