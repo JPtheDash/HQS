@@ -52,8 +52,8 @@ export default class StormScene extends Phaser.Scene {
     this.buildCollectibles();
     this.buildFinish(3720, GAME_HEIGHT - 480);
 
-    this.player = new Player(this, 150, GAME_HEIGHT - 320);
-    this.spawnX = 150; this.spawnY = GAME_HEIGHT - 320;
+    this.player = new Player(this, 150, GAME_HEIGHT - 400);
+    this.spawnX = 150; this.spawnY = GAME_HEIGHT - 400;
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.overlap(this.player, this.pickups, this.onCollect, null, this);
     this.physics.add.overlap(this.player, this.hazards, this.onHazard, null, this);
@@ -107,13 +107,11 @@ export default class StormScene extends Phaser.Scene {
 
   makeCloud(x, y, w) {
     if (this.textures.exists('whitecloud')) {
-      // The fluffy white cloud platform, scaled a touch wider than the walkway.
-      // The visible cloud sits ~26% down the (sparkle-padded) image, so lift the
-      // art up by that inset to align the cloud's top with the platform line and
-      // drop the walk strip just below it.
+      // The fluffy white cloud platform. Raise the art so its solid body (not the
+      // wispy top) meets the walk strip, otherwise Hanuman floats above the puff.
       const img = this.add.image(x, y, 'whitecloud').setOrigin(0.5, 0).setDepth(-5);
       img.setScale((w * 1.5) / img.width);
-      img.y = y - img.displayHeight * 0.26;
+      img.y = y - img.displayHeight * 0.47;
       this.addPlatformBody(x, y + 12, w * 0.72);
     } else if (this.textures.exists('cloud')) {
       this.add.image(x, y, 'cloud').setOrigin(0.5, 0).setDepth(-5).setScale(w / this.textures.get('cloud').getSourceImage().width).setTint(0xc9c9dd);
@@ -231,12 +229,13 @@ export default class StormScene extends Phaser.Scene {
   }
 
   buildFinish(x, y) {
-    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 300 });
-    this.add.circle(x, y, 70, 0xffe9a8, 0.25).setDepth(-4);
-    const g = this.add.star(x, y, 6, 22, 46, 0xfff2c0).setDepth(-3);
+    // Big glowing portal Hanuman flies into (the enter-gate effect pulls him in).
+    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 480 });
+    this.add.circle(x, y, 60, 0xffe9a8, 0.25).setDepth(-4);
+    const g = this.add.star(x, y, 6, 20, 42, 0xfff2c0).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 6000, repeat: -1 });
     this.tweens.add({ targets: g, scale: 1.15, duration: 900, yoyo: true, repeat: -1 });
-    this.finishZone = new Phaser.Geom.Rectangle(x - 60, y - 70, 120, 140);
+    this.finishZone = new Phaser.Geom.Rectangle(x - 90, y - 130, 180, 280);
   }
 
   buildFlyMeter() {

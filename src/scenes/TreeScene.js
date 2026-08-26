@@ -215,12 +215,13 @@ export default class TreeScene extends Phaser.Scene {
     stripCheckerGrey(this, 'herb'); // the herb art ships with a dark background
     // A branch platform for the gate to stand on, and the gate grounded on it.
     const branchY = y + 70;
-    this.makeBranch(x, branchY, 320, 0);
-    const surfaceY = branchY + (this.textures.get('ledge-small').getSourceImage().height * (320 / this.textures.get('ledge-small').getSourceImage().width)) * 0.19;
-    addFinishGate(this, x, surfaceY, { height: 300 });
+    this.makeBranch(x, branchY, 380, 0);
+    const surfaceY = branchY + (this.textures.get('ledge-small').getSourceImage().height * (380 / this.textures.get('ledge-small').getSourceImage().width)) * 0.19;
+    // Big enough that Hanuman walks up and through the archway.
+    addFinishGate(this, x, surfaceY, { height: 520 });
 
     // The Sanjeevini herb glows in the archway as the goal to reach.
-    const herbY = surfaceY - 150;
+    const herbY = surfaceY - 300;
     this.add.circle(x, herbY, 46, 0xffe9a8, 0.28).setDepth(-4);
     const herb = this.textures.exists('herb')
       ? this.add.image(x, herbY, 'herb').setDepth(-3)
@@ -228,7 +229,7 @@ export default class TreeScene extends Phaser.Scene {
     if (herb.width) herb.setScale(84 / herb.width);
     this.tweens.add({ targets: herb, y: herbY - 12, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: herb, angle: 8, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.finishZone = new Phaser.Geom.Rectangle(x - 55, surfaceY - 250, 110, 250);
+    this.finishZone = new Phaser.Geom.Rectangle(x - 70, surfaceY - 360, 140, 360);
   }
 
   // --- Controls (buttons + keyboard, tap=jump / hold=fly) ----------------

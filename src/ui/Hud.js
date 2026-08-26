@@ -32,6 +32,9 @@ export default class Hud {
 
     this.layer = scene.add.container(0, 0).setScrollFactor(0).setDepth(1000);
 
+    // Remember this level so PLAY can resume here after the player goes Home.
+    try { localStorage.setItem('hqs.level', scene.scene.key); } catch (e) { /* private mode */ }
+
     this.gauges = {};
     let y = GAUGE_TOP;
     ['heart', 'energy', 'timer'].forEach((name) => {

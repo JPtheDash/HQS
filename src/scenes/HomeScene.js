@@ -361,7 +361,7 @@ export default class HomeScene extends Phaser.Scene {
     addToModal(body);
     this.panelButton(CENTER_X, top + this.modalBottomOffset(), '▶  Watch Intro', () => {
       this.closeModal();
-      this.startGame();
+      this.playIntro();
     });
   }
 
@@ -381,10 +381,27 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   startGame() {
-    // PLAY → the Ramayana cinematic (Scenes 2–5).
+    // PLAY → resume from the furthest level reached, else play the intro fresh.
+    const saved = this.getSavedLevel();
     this.cameras.main.fadeOut(600, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('CinematicScene');
-    });
+    this.time.delayedCall(620, () => this.scene.start(saved || 'CinematicScene'));
+  }
+
+  // Always play the opening cinematic (used by "Watch Intro").
+  playIntro() {
+    this.cameras.main.fadeOut(600, 0, 0, 0);
+    this.time.delayedCall(620, () => this.scene.start('CinematicScene'));
+  }
+
+  // The furthest gameplay level the player has reached (saved by the HUD),
+  // or null for a brand-new game. Persists across sessions via localStorage.
+  getSavedLevel() {
+    const LEVELS = ['GameScene', 'TreeScene', 'DangerScene', 'TiredScene',
+      'FruitForestScene', 'SkyScene', 'StormScene', 'MagicForestScene',
+      'RakshasaScene', 'MountainScene', 'RiverScene', 'RiverBossScene', 'DronagiriScene'];
+    try {
+      const k = localStorage.getItem('hqs.level');
+      return LEVELS.includes(k) ? k : null;
+    } catch (e) { return null; }
   }
 }

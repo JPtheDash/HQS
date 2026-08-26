@@ -55,8 +55,8 @@ export default class SkyScene extends Phaser.Scene {
     this.buildCollectibles();
     this.buildFinish(3860, GAME_HEIGHT - 460);
 
-    this.player = new Player(this, 140, GAME_HEIGHT - 300);
-    this.spawnX = 140; this.spawnY = GAME_HEIGHT - 300;
+    this.player = new Player(this, 140, GAME_HEIGHT - 380);
+    this.spawnX = 140; this.spawnY = GAME_HEIGHT - 380;
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.overlap(this.player, this.pickups, this.onCollect, null, this);
     this.physics.add.overlap(this.player, this.hazards, this.onHazard, null, this);
@@ -114,11 +114,11 @@ export default class SkyScene extends Phaser.Scene {
 
   makeCloud(x, y, w) {
     if (this.textures.exists('whitecloud')) {
-      // Fluffy white cloud platform. Lift the art so its visible top meets the
-      // platform line (the cloud sits ~26% down the sparkle-padded image).
+      // Fluffy white cloud platform. Raise the art so its solid body (not the
+      // wispy top) meets the walk strip, otherwise Hanuman floats above the puff.
       const img = this.add.image(x, y, 'whitecloud').setOrigin(0.5, 0).setDepth(-5);
       img.setScale((w * 1.5) / img.width);
-      img.y = y - img.displayHeight * 0.26;
+      img.y = y - img.displayHeight * 0.47;
       this.addPlatformBody(x, y + 12, w * 0.72);
     } else {
       const g = this.add.graphics().setDepth(-5);
@@ -214,12 +214,13 @@ export default class SkyScene extends Phaser.Scene {
   }
 
   buildFinish(x, y) {
-    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 300 });
-    this.add.circle(x, y, 70, 0xffe9a8, 0.25).setDepth(-4);
-    const g = this.add.star(x, y, 6, 22, 46, 0xfff2c0).setDepth(-3);
+    // Big glowing portal Hanuman flies into (the enter-gate effect pulls him in).
+    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 480 });
+    this.add.circle(x, y, 60, 0xffe9a8, 0.25).setDepth(-4);
+    const g = this.add.star(x, y, 6, 20, 42, 0xfff2c0).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 6000, repeat: -1 });
     this.tweens.add({ targets: g, scale: 1.15, duration: 900, yoyo: true, repeat: -1 });
-    this.finishZone = new Phaser.Geom.Rectangle(x - 60, y - 70, 120, 140);
+    this.finishZone = new Phaser.Geom.Rectangle(x - 90, y - 130, 180, 280);
   }
 
   buildFlyMeter() {

@@ -133,6 +133,28 @@ export function stripCheckerGrey(scene, key) {
   }
   for (const i of toClear) d[i + 3] = 0;
 
+  // Despeckle: these assets scatter faint sparkle dots across the (now
+  // transparent) background, which read as a dotted rectangle around the art.
+  // Clear any pixel whose 9x9 neighbourhood is mostly transparent (an isolated
+  // speck); solid regions keep nearly all their neighbours so they survive.
+  const speckKill = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] === 0) continue;
+      let cnt = 0;
+      for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (d[(ny * w + nx) * 4 + 3] > 30) cnt++;
+        }
+      }
+      if (cnt < 20) speckKill.push(i); // < ~25% of the 81 neighbours opaque
+    }
+  }
+  for (const i of speckKill) d[i + 3] = 0;
+
   ctx.putImageData(imgData, 0, 0);
   scene.textures.remove(key);
   const tex = scene.textures.createCanvas(key, w, h);

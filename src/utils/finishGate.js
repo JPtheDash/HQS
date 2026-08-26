@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { stripBackground } from './cleanTexture.js';
 
 // The finish-gate PNG ships with a flattened background AND a lot of empty
@@ -51,13 +52,41 @@ function ensureGateTexture(scene) {
 //
 // Used by every traversal level's buildFinish(). The Dronagiri herb-collection
 // scene is intentionally excluded, and the boss arena ends on the boss defeat.
-export function addFinishGate(scene, x, baseY, { height = 400, bottomOrigin = true, depth = -6 } = {}) {
+export function addFinishGate(scene, x, baseY, { height = 480, bottomOrigin = true, depth = -6 } = {}) {
   if (!scene.textures.exists('finish-gate')) return null;
   const key = ensureGateTexture(scene);
   const gate = scene.add.image(x, baseY, key)
     .setOrigin(0.5, bottomOrigin ? 1 : 0.5)
     .setDepth(depth);
   gate.setScale(height / gate.height);
+
+  // A soft golden halo pulses behind the gate so it reads as a glowing portal.
+  if (scene.textures.exists('glow')) {
+    const cy = gate.y - gate.displayHeight * (bottomOrigin ? 0.5 : 0);
+    const glow = scene.add.image(x, cy, 'glow')
+      .setDepth(depth - 1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0xffdf8a);
+    glow.setDisplaySize(gate.displayWidth * 1.9, gate.displayHeight * 1.35);
+    glow.baseSX = glow.scaleX; glow.baseSY = glow.scaleY;
+    scene.tweens.add({
+      targets: glow, alpha: 0.45,
+      scaleX: glow.baseSX * 1.12, scaleY: glow.baseSY * 1.12,
+      duration: 1150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+    });
+    glow.setAlpha(0.8);
+    // A second tighter core glow for a warmer centre.
+    const core = scene.add.image(x, cy, 'glow')
+      .setDepth(depth - 1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0xfff3c8);
+    core.setDisplaySize(gate.displayWidth * 1.0, gate.displayHeight * 0.8);
+    scene.tweens.add({
+      targets: core, alpha: { from: 0.5, to: 0.9 },
+      duration: 780, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+    });
+  }
+
   scene._finishGate = gate; // remembered so enterFinishGate() can absorb Hanuman
   return gate;
 }
