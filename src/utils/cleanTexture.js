@@ -16,6 +16,172 @@ function alreadyClean(scene, key) {
   return { set, done: set.has(key) };
 }
 
+// Crop a texture down to its opaque bounds (removing transparent padding), so
+// an origin-bottom sprite sits on its real base rather than on empty pixels
+// (e.g. the fire, whose flames float ~20% above the image bottom). Cached.
+export function trimTransparent(scene, key) {
+  const flag = '__trim_' + key;
+  if (scene.game.registry.get(flag) || !scene.textures.exists(key)) return;
+  const src = scene.textures.get(key).getSourceImage();
+  const w = src.width, h = src.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(src, 0, 0);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  let top = -1, bot = -1, left = -1, right = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (d[(y * w + x) * 4 + 3] > 20) {
+        if (top < 0) top = y;
+        bot = y;
+        if (left < 0 || x < left) left = x;
+        if (x > right) right = x;
+      }
+    }
+  }
+  if (top < 0) { scene.game.registry.set(flag, true); return; }
+  const cw = right - left + 1, ch = bot - top + 1;
+  const out = document.createElement('canvas');
+  out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(canvas, left, top, cw, ch, 0, 0, cw, ch);
+  scene.textures.remove(key);
+  const tex = scene.textures.createCanvas(key, cw, ch);
+  tex.getContext().drawImage(out, 0, 0);
+  tex.refresh();
+  scene.game.registry.set(flag, true);
+}
+
+// Some AI-exported assets (the storm-level clouds) bake a transparency checker
+// as two exact neutral greys (~127 and ~191). A generic strip would eat a white
+// cloud (white reads as neutral) or a dark cloud (dark reads as neutral-ish),
+// so this targets ONLY those two grey shades: flood-fill inward from the border,
+// clearing pixels that are near-neutral AND close to 127 or 191. White (255) and
+// coloured cloud pixels fall outside that window, and the cloud's own outline
+// blocks the flood from reaching its interior.
+export function stripCheckerGrey(scene, key) {
+  const { set, done } = alreadyClean(scene, key);
+  if (done || !scene.textures.exists(key)) return;
+
+  const src = scene.textures.get(key).getSourceImage();
+  const w = src.width, h = src.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(src, 0, 0);
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+
+  // Auto-detect the checker's grey shades from the border (works for both the
+  // light 127/191 cloud checker and the dark ~58/100 fire checker). We only
+  // collect near-neutral border pixels, then take the most common values.
+  const hist = {};
+  const sampleBorder = (x, y) => {
+    const i = (y * w + x) * 4;
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    if (d[i + 3] > 40 && Math.max(r, g, b) - Math.min(r, g, b) <= 12) {
+      const v = Math.round((r + g + b) / 3 / 4) * 4;
+      hist[v] = (hist[v] || 0) + 1;
+    }
+  };
+  for (let x = 0; x < w; x++) { sampleBorder(x, 0); sampleBorder(x, h - 1); }
+  for (let y = 0; y < h; y++) { sampleBorder(0, y); sampleBorder(w - 1, y); }
+  const shades = Object.entries(hist).sort((a, b) => b[1] - a[1]).slice(0, 6).map((e) => +e[0]);
+  if (!shades.length) { set.add(key); return; }
+
+  const isChecker = (i) => {
+    if (d[i + 3] === 0) return true;
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    if (Math.max(r, g, b) - Math.min(r, g, b) > 16) return false; // coloured → keep
+    const v = (r + g + b) / 3;
+    for (const s of shades) if (Math.abs(v - s) <= 22) return true;
+    return false;
+  };
+
+  const visited = new Uint8Array(w * h);
+  const stack = [];
+  for (let x = 0; x < w; x++) stack.push(x, 0, x, h - 1);
+  for (let y = 0; y < h; y++) stack.push(0, y, w - 1, y);
+  while (stack.length) {
+    const y = stack.pop(), x = stack.pop();
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const p = y * w + x;
+    if (visited[p]) continue;
+    visited[p] = 1;
+    const i = p * 4;
+    if (d[i + 3] !== 0 && !isChecker(i)) continue;
+    d[i + 3] = 0;
+    stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1);
+  }
+
+  // One defringe ring: trim leftover grey halo bordering transparency.
+  const toClear = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] === 0) continue;
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (d[(ny * w + nx) * 4 + 3] === 0) { edge = true; break; }
+        }
+      }
+      if (edge && isChecker(i)) toClear.push(i);
+    }
+  }
+  for (const i of toClear) d[i + 3] = 0;
+
+  ctx.putImageData(imgData, 0, 0);
+  scene.textures.remove(key);
+  const tex = scene.textures.createCanvas(key, w, h);
+  tex.getContext().drawImage(canvas, 0, 0);
+  tex.refresh();
+  set.add(key);
+}
+
+// ground.png ships as a fully-opaque strip: a flat grey "sky" on top of a grass
+// line and a dirt body. The general flood-strip below can't handle it — it
+// samples the bottom corners (which are dirt, i.e. the subject) as background
+// and eats the whole dirt body. Instead, clear ONLY the grey sky: walk each
+// column top-down turning neutral-grey pixels transparent until the (coloured)
+// grass stops us, which follows the grass silhouette and leaves grass + dirt
+// fully intact. Runs once (cached) — after it, the ground has real alpha so the
+// generic stripBackground('ground') calls in scenes auto-skip.
+export function cleanGroundSky(scene, key = 'ground') {
+  const { set, done } = alreadyClean(scene, key);
+  if (done || !scene.textures.exists(key)) return;
+
+  const src = scene.textures.get(key).getSourceImage();
+  const w = src.width, h = src.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(src, 0, 0);
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+
+  const isSky = (i) => {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    return mx - mn <= 34 && mx >= 60 && mx <= 185; // flat mid-grey sky
+  };
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      const i = (y * w + x) * 4;
+      if (isSky(i)) d[i + 3] = 0;
+      else break; // hit the grass/subject for this column
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  scene.textures.remove(key);
+  const tex = scene.textures.createCanvas(key, w, h);
+  tex.getContext().drawImage(canvas, 0, 0);
+  tex.refresh();
+  set.add(key);
+}
+
 export function stripBackground(scene, key, tolerance = 78) {
   const { set, done } = alreadyClean(scene, key);
   if (done || !scene.textures.exists(key)) return;
@@ -31,6 +197,17 @@ export function stripBackground(scene, key, tolerance = 78) {
   ctx.drawImage(src, 0, 0);
   const imgData = ctx.getImageData(0, 0, w, h);
   const d = imgData.data;
+
+  // Guard: if the source already has real transparency (a clean PNG export),
+  // it does NOT need — and must not get — a flood-fill strip. The flood keys on
+  // neutral/dark colours and would eat the subject's own dark, shadowed areas
+  // (e.g. the ground's dirt underside or the ledge's roots). Assets exported
+  // with a flattened checker/opaque background have ~0% transparency and still
+  // fall through to the strip below.
+  let clearCount = 0;
+  const step = 4 * 37; // sparse sample is plenty to detect real alpha
+  for (let i = 3; i < d.length; i += step) if (d[i] < 8) clearCount++;
+  if (clearCount / (d.length / step) > 0.06) { set.add(key); return; }
 
   // Sample the four corners as background reference colours.
   const cornerColors = [

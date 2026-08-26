@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENE 7 — ASHOKA VATIKA (Chapter 1 tutorial)
 // A gentle side-scrolling platformer that teaches Move → Jump → Collect one
@@ -26,9 +27,11 @@ export default class GameScene extends Phaser.Scene {
   create() {
     // Several props shipped with opaque/checker backgrounds — strip them so
     // they render cleanly over the world.
-    // boulder.png already has real alpha — stripping erases the grey rock, so
-    // it's deliberately excluded here (the strip result is cached and shared).
-    ['ground', 'ledge', 'banana', 'mango', 'coconut', 'finish-gate'].forEach(
+    // boulder.png AND platform-ledge.png already have real alpha — stripping
+    // erases them (the ledge's dark shadowed dirt underside reads as the black
+    // transparent-corner reference and gets flood-filled away, leaving only a
+    // grass sliver), so they're deliberately excluded here.
+    ['ground', 'banana', 'mango', 'coconut', 'finish-gate'].forEach(
       (k) => stripBackground(this, k)
     );
 
@@ -149,29 +152,13 @@ export default class GameScene extends Phaser.Scene {
     return img;
   }
 
-  // --- Thorn bush hazard (drawn) ----------------------------------------
+  // --- Thorn bush hazard (ornate thorns.png) ----------------------------
   buildThornBush(x) {
     const y = GROUND_Y;
-    const g = this.add.graphics().setDepth(-4);
-    // Green mound.
-    g.fillStyle(0x2f6b2a, 1);
-    g.fillEllipse(x, y - 12, 130, 60);
-    g.fillStyle(0x3c8a34, 1);
-    g.fillEllipse(x, y - 22, 110, 46);
-    // Thorn spikes.
-    g.fillStyle(0x274d1f, 1);
-    for (let i = -3; i <= 3; i++) {
-      const sx = x + i * 18;
-      g.fillTriangle(sx - 7, y - 20, sx + 7, y - 20, sx, y - 68 - Math.abs(i) * -2);
-    }
-    // Small red thorn tips.
-    g.fillStyle(0x8a2b2b, 1);
-    for (let i = -3; i <= 3; i++) {
-      const sx = x + i * 18;
-      g.fillCircle(sx, y - 66, 3);
-    }
-
-    const zone = this.add.zone(x, y - 34, 120, 60);
+    stripBackground(this, 'thorns');
+    const img = this.add.image(x, y + 12, 'thorns').setOrigin(0.5, 1).setDepth(-4);
+    img.setScale(150 / img.height);
+    const zone = this.add.zone(x, y - img.displayHeight * 0.4, img.displayWidth * 0.62, img.displayHeight * 0.7);
     this.physics.add.existing(zone, true);
     this.hazards.add(zone);
   }
@@ -214,8 +201,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   buildFinishGate(x) {
-    const gate = this.add.image(x, GROUND_Y, 'finish-gate').setOrigin(0.5, 1).setDepth(-6);
-    gate.setScale(340 / gate.width);
+    addFinishGate(this, x, GROUND_Y);
     // Finish is checked geometrically in update() (player is created later).
     const zone = this.add.zone(x, GROUND_Y - 120, 80, 240);
     this.finishZone = zone;
@@ -393,7 +379,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Ashoka Vatika cleared!', 'Tap to continue', '#ffe9a8', false, 'TreeScene');
+    enterFinishGate(this, () => this.showEndCard('Ashoka Vatika cleared!', 'Tap to continue', '#ffe9a8', false, 'TreeScene'));
   }
 
   loseLevel(reason) {

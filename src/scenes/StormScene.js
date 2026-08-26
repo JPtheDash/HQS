@@ -4,6 +4,8 @@ import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
+import { stripCheckerGrey } from '../utils/cleanTexture.js';
 
 // SCENE 14 — THE STORM (Chapter 4, flying + survival)
 // The bright sky turns violent: fly onward through wind gusts, drifting storm
@@ -23,12 +25,16 @@ export default class StormScene extends Phaser.Scene {
     this.energy = 1;
     this.coinsCollected = 0;
     this.invincibleUntil = 0;
-    this.timeLeft = 120;
+    this.timeLeft = 140; // eased: a little more time
     this.wind = 0;
 
     this.physics.world.setBounds(0, 0, WORLD_W, GAME_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_W, GAME_HEIGHT);
     this.cameras.main.fadeIn(500, 0, 0, 0);
+
+    // The storm-level clouds ship with a baked grey transparency checker —
+    // strip it (targeting just the checker greys, preserving the clouds).
+    ['whitecloud', 'stormcloud', 'thunder'].forEach((k) => stripCheckerGrey(this, k));
 
     this.buildBackground();
     this.solids = this.physics.add.staticGroup();
@@ -72,10 +78,10 @@ export default class StormScene extends Phaser.Scene {
         if (this.timeLeft <= 0) this.loseLevel('Out of time!');
       }
     });
-    // Lightning strikes near the player, telegraphed.
-    this.time.addEvent({ delay: 2400, loop: true, callback: () => { if (!this.finished) this.telegraphLightning(); } });
-    // Wind gusts shift direction every few seconds.
-    this.time.addEvent({ delay: 3000, loop: true, callback: () => { this.wind = Phaser.Math.Between(-90, 90); } });
+    // Lightning strikes near the player, telegraphed. (Eased: less frequent.)
+    this.time.addEvent({ delay: 3400, loop: true, callback: () => { if (!this.finished) this.telegraphLightning(); } });
+    // Wind gusts shift direction every few seconds. (Eased: gentler gusts.)
+    this.time.addEvent({ delay: 3200, loop: true, callback: () => { this.wind = Phaser.Math.Between(-45, 45); } });
     // Periodic thunder flash.
     this.time.addEvent({ delay: 5200, loop: true, callback: () => { if (!this.finished) this.cameras.main.flash(160, 200, 200, 255); } });
   }
@@ -100,16 +106,26 @@ export default class StormScene extends Phaser.Scene {
   }
 
   makeCloud(x, y, w) {
-    if (this.textures.exists('cloud')) {
+    if (this.textures.exists('whitecloud')) {
+      // The fluffy white cloud platform, scaled a touch wider than the walkway.
+      // The visible cloud sits ~26% down the (sparkle-padded) image, so lift the
+      // art up by that inset to align the cloud's top with the platform line and
+      // drop the walk strip just below it.
+      const img = this.add.image(x, y, 'whitecloud').setOrigin(0.5, 0).setDepth(-5);
+      img.setScale((w * 1.5) / img.width);
+      img.y = y - img.displayHeight * 0.26;
+      this.addPlatformBody(x, y + 12, w * 0.72);
+    } else if (this.textures.exists('cloud')) {
       this.add.image(x, y, 'cloud').setOrigin(0.5, 0).setDepth(-5).setScale(w / this.textures.get('cloud').getSourceImage().width).setTint(0xc9c9dd);
+      this.addPlatformBody(x, y + 14, w * 0.86);
     } else {
       const g = this.add.graphics().setDepth(-5);
       g.fillStyle(0xbfc4d8, 0.98);
       for (let cx = -w / 2; cx <= w / 2; cx += w / 6) g.fillCircle(x + cx, y + 24, 34);
       g.fillRoundedRect(x - w / 2, y + 8, w, 46, 22);
       g.fillStyle(0x9aa0bb, 0.9); g.fillRoundedRect(x - w / 2, y + 34, w, 22, 14);
+      this.addPlatformBody(x, y + 14, w * 0.86);
     }
-    this.addPlatformBody(x, y + 14, w * 0.86);
   }
 
   makeRock(x, y, w) {
@@ -127,23 +143,28 @@ export default class StormScene extends Phaser.Scene {
   }
 
   buildStormClouds() {
-    [[450, GAME_HEIGHT - 300], [1000, GAME_HEIGHT - 480], [1600, GAME_HEIGHT - 300],
-     [2150, GAME_HEIGHT - 500], [2750, GAME_HEIGHT - 320], [3350, GAME_HEIGHT - 520]]
+    // Eased: fewer storm clouds so the flight path is less obstructed.
+    [[1000, GAME_HEIGHT - 480], [2150, GAME_HEIGHT - 500], [3350, GAME_HEIGHT - 520]]
       .forEach(([x, y]) => this.makeStormCloud(x, y));
   }
 
   makeStormCloud(x, y) {
     if (this.textures.exists('stormcloud')) {
-      const img = this.add.image(x, y, 'stormcloud').setDepth(4).setScale(130 / this.textures.get('stormcloud').getSourceImage().width);
+      const img = this.add.image(x, y, 'stormcloud').setDepth(4);
+      img.setScale(300 / img.width);
       this.tweens.add({ targets: img, x: x + 60, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    } else {
-      const g = this.add.graphics().setDepth(4);
-      g.fillStyle(0x39394f, 0.97);
-      for (let cx = -60; cx <= 60; cx += 30) g.fillCircle(x + cx, y, 34);
-      g.fillRoundedRect(x - 70, y, 140, 40, 18);
-      g.fillStyle(0xffe23b, 1); g.fillTriangle(x - 6, y + 34, x + 10, y + 34, x - 2, y + 66);
-      this.tweens.add({ targets: g, alpha: 0.55, duration: 500, yoyo: true, repeat: -1 });
+      // Contact zone hugs the visible dark cloud body.
+      const zone = this.add.zone(x, y, img.displayWidth * 0.72, img.displayHeight * 0.6);
+      this.physics.add.existing(zone, true);
+      this.hazards.add(zone);
+      return;
     }
+    const g = this.add.graphics().setDepth(4);
+    g.fillStyle(0x39394f, 0.97);
+    for (let cx = -60; cx <= 60; cx += 30) g.fillCircle(x + cx, y, 34);
+    g.fillRoundedRect(x - 70, y, 140, 40, 18);
+    g.fillStyle(0xffe23b, 1); g.fillTriangle(x - 6, y + 34, x + 10, y + 34, x - 2, y + 66);
+    this.tweens.add({ targets: g, alpha: 0.55, duration: 500, yoyo: true, repeat: -1 });
     const zone = this.add.zone(x, y + 8, 150, 84);
     this.physics.add.existing(zone, true);
     this.hazards.add(zone);
@@ -151,19 +172,30 @@ export default class StormScene extends Phaser.Scene {
 
   telegraphLightning() {
     // Strike a bit ahead of the player, with a warning bar first.
-    const x = Phaser.Math.Clamp(this.player.x + Phaser.Math.Between(-40, 320), 60, WORLD_W - 60);
+    // Eased: bias strikes a little further ahead so they rarely land right on
+    // the player's current spot, and give a longer warning before the bolt.
+    const x = Phaser.Math.Clamp(this.player.x + Phaser.Math.Between(40, 360), 60, WORLD_W - 60);
     const warn = this.add.rectangle(x, GAME_HEIGHT / 2, 14, GAME_HEIGHT, 0xfff2a0, 0.35).setDepth(800);
-    this.tweens.add({ targets: warn, alpha: 0.1, duration: 180, yoyo: true, repeat: 2 });
-    this.time.delayedCall(720, () => {
+    this.tweens.add({ targets: warn, alpha: 0.1, duration: 200, yoyo: true, repeat: 2 });
+    this.time.delayedCall(950, () => {
       warn.destroy();
       if (this.finished) return;
-      // The bolt.
-      const bolt = this.add.rectangle(x, GAME_HEIGHT / 2, 22, GAME_HEIGHT, 0xffffff, 0.95).setDepth(801);
-      this.add.rectangle(x, GAME_HEIGHT / 2, 46, GAME_HEIGHT, 0x9ad0ff, 0.35).setDepth(800);
-      this.cameras.main.shake(160, 0.01);
+      // The strike — the thunder bolt art drops through the warned column. The
+      // wide transparent margins don't render, so scaling by height keeps the
+      // visible bolt centred on x.
+      let bolt;
+      if (this.textures.exists('thunder')) {
+        bolt = this.add.image(x, -40, 'thunder').setOrigin(0.5, 0).setDepth(801);
+        bolt.setScale((GAME_HEIGHT * 0.82) / bolt.height);
+      } else {
+        bolt = this.add.rectangle(x, GAME_HEIGHT / 2, 22, GAME_HEIGHT, 0xffffff, 0.95).setDepth(801);
+        this.add.rectangle(x, GAME_HEIGHT / 2, 46, GAME_HEIGHT, 0x9ad0ff, 0.35).setDepth(800);
+      }
+      this.cameras.main.flash(110, 200, 220, 255);
+      this.cameras.main.shake(180, 0.012);
       // Damage if the player is within the strike column and vulnerable.
-      if (Math.abs(this.player.x - x) < 45 && this.time.now >= this.invincibleUntil) this.strikePlayer();
-      this.tweens.add({ targets: bolt, alpha: 0, duration: 260, onComplete: () => bolt.destroy() });
+      if (Math.abs(this.player.x - x) < 34 && this.time.now >= this.invincibleUntil) this.strikePlayer();
+      this.tweens.add({ targets: bolt, alpha: 0, duration: 320, delay: 130, onComplete: () => bolt.destroy() });
     });
   }
 
@@ -199,6 +231,7 @@ export default class StormScene extends Phaser.Scene {
   }
 
   buildFinish(x, y) {
+    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 300 });
     this.add.circle(x, y, 70, 0xffe9a8, 0.25).setDepth(-4);
     const g = this.add.star(x, y, 6, 22, 46, 0xfff2c0).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 6000, repeat: -1 });
@@ -297,7 +330,7 @@ export default class StormScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Through the storm!', 'Tap to continue', '#ffe9a8', false, 'MagicForestScene');
+    enterFinishGate(this, () => this.showEndCard('Through the storm!', 'Tap to continue', '#ffe9a8', false, 'MagicForestScene'));
   }
 
   loseLevel(reason) {

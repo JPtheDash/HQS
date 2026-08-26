@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENE 11 — FRUIT FOREST (Chapter 2, rest area)
 // After the danger, a calm breather: no hazards, just a lush grove full of fruit.
@@ -148,6 +149,7 @@ export default class FruitForestScene extends Phaser.Scene {
   }
 
   buildFinish(x) {
+    addFinishGate(this, x, GROUND_Y);
     this.add.circle(x, GROUND_Y - 120, 60, 0xffe9a8, 0.25).setDepth(-4);
     const herb = this.textures.exists('herb') ? this.add.image(x, GROUND_Y - 120, 'herb').setDepth(-3)
       : this.add.star(x, GROUND_Y - 120, 5, 16, 34, 0x6fe06f).setDepth(-3);
@@ -247,7 +249,7 @@ export default class FruitForestScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Rested & ready!', 'Tap to fly', '#ffe9a8', false, 'SkyScene');
+    enterFinishGate(this, () => this.showEndCard('Rested & ready!', 'Tap to fly', '#ffe9a8', false, 'SkyScene'));
   }
 
   loseLevel(reason) {

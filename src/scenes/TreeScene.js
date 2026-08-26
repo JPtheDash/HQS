@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENE 8 — TREE JUMPING (Chapter 1, part 2)
 // Hanuman climbs through the forest canopy on branch platforms — some of them
@@ -22,7 +23,9 @@ export default class TreeScene extends Phaser.Scene {
   create() {
     // Fruit pickups ship with opaque backgrounds — strip them (no-op if a
     // previous scene already cleaned them this session).
-    ['ground', 'ledge', 'banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
+    // 'ledge' has real alpha already — stripping erases its dirt underside, so
+    // it's excluded (see GameScene note).
+    ['ground', 'banana', 'mango', 'coconut'].forEach((k) => stripBackground(this, k));
 
     this.finished = false;
     this.invincibleUntil = 0;
@@ -43,6 +46,7 @@ export default class TreeScene extends Phaser.Scene {
 
     this.buildFloor();
     this.buildBranches();
+    this.buildVines();
     this.buildCollectibles();
     this.buildFinish(2820, GROUND_Y - 470);
 
@@ -147,6 +151,43 @@ export default class TreeScene extends Phaser.Scene {
     }
   }
 
+  // --- Climbable vines ---------------------------------------------------
+  // Hanging vines between the branches. Overlap one and hold ▲ to climb it.
+  buildVines() {
+    this.vines = [];
+    // [x, topY, bottomY]
+    const defs = [
+      [470, GROUND_Y - 340, GROUND_Y - 10],
+      [1270, GROUND_Y - 470, GROUND_Y - 150],
+      [1920, GROUND_Y - 560, GROUND_Y - 240],
+      [2560, GROUND_Y - 640, GROUND_Y - 340]
+    ];
+    defs.forEach(([x, topY, botY]) => {
+      this.drawVine(x, topY, botY);
+      this.vines.push({ x, topY, bottomY: botY, grabW: 46 });
+    });
+  }
+
+  drawVine(x, topY, botY) {
+    const g = this.add.graphics().setDepth(-6);
+    const wob = (y) => Math.sin(y / 42) * 11;
+    // Anchor knot at the top.
+    g.fillStyle(0x3a5f24, 1); g.fillCircle(x + wob(topY), topY, 9);
+    // Rope.
+    g.lineStyle(11, 0x3c6e2a, 1); g.beginPath();
+    for (let y = topY; y <= botY; y += 6) (y === topY ? g.moveTo(x + wob(y), y) : g.lineTo(x + wob(y), y));
+    g.strokePath();
+    g.lineStyle(4, 0x6bb345, 0.9); g.beginPath();
+    for (let y = topY; y <= botY; y += 6) (y === topY ? g.moveTo(x + wob(y) - 2, y) : g.lineTo(x + wob(y) - 2, y));
+    g.strokePath();
+    // Leaves.
+    g.fillStyle(0x4c8a30, 1);
+    for (let y = topY + 34; y < botY; y += 58) {
+      g.fillEllipse(x + wob(y) + 16, y, 30, 13);
+      g.fillEllipse(x + wob(y) - 16, y + 22, 30, 13);
+    }
+  }
+
   // --- Collectibles ------------------------------------------------------
   buildCollectibles() {
     const spots = [
@@ -171,6 +212,7 @@ export default class TreeScene extends Phaser.Scene {
   }
 
   buildFinish(x, y) {
+    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 300 });
     // A glowing herb marker to reach.
     this.add.circle(x, y, 46, 0xffe9a8, 0.25).setDepth(-4);
     const herb = this.textures.exists('herb')
@@ -222,7 +264,7 @@ export default class TreeScene extends Phaser.Scene {
   }
 
   buildSigns() {
-    this.sign(340, GROUND_Y - 260, 'Climb the branches!');
+    this.sign(300, GROUND_Y - 260, 'Grab a vine &\nHOLD ▲ to climb!');
     this.sign(1080, GROUND_Y - 470, 'Some branches move —\ntime your jump');
     this.sign(2760, GROUND_Y - 560, 'Reach the herb');
   }
@@ -278,6 +320,16 @@ export default class TreeScene extends Phaser.Scene {
       m.prevX = m.img.x;
     }
 
+    // Grab a vine when overlapping its vertical column.
+    let onVine = false;
+    if (this.vines) {
+      const p = this.player;
+      for (const v of this.vines) {
+        if (Math.abs(p.x - v.x) < v.grabW && p.y > v.topY - 24 && p.y < v.bottomY + 30) { onVine = true; break; }
+      }
+    }
+    this.player.onVine = onVine;
+
     const left = this.ctrl.left || this.cursors.left.isDown || this.keys.A.isDown;
     const right = this.ctrl.right || this.cursors.right.isDown || this.keys.D.isDown;
     if (left && !right) this.player.moveLeft();
@@ -308,7 +360,7 @@ export default class TreeScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Canopy cleared!', 'Tap to continue', '#ffe9a8', false, 'DangerScene');
+    enterFinishGate(this, () => this.showEndCard('Canopy cleared!', 'Tap to continue', '#ffe9a8', false, 'DangerScene'));
   }
 
   loseLevel(reason) {

@@ -20,6 +20,7 @@ import RiverBossScene from './scenes/RiverBossScene.js';
 import DronagiriScene from './scenes/DronagiriScene.js';
 import ReturnScene from './scenes/ReturnScene.js';
 import MapScene from './scenes/MapScene.js';
+import PauseScene from './scenes/PauseScene.js';
 
 // One game config, kept small on purpose. New scenes get added to the
 // `scene` array below in the order they should be registered (the first
@@ -47,7 +48,7 @@ const config = {
       debug: false
     }
   },
-  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene, GameScene, TreeScene, DangerScene, TiredScene, FruitForestScene, SkyScene, StormScene, MagicForestScene, RakshasaScene, MountainScene, RiverScene, RiverBossScene, DronagiriScene, ReturnScene, MapScene]
+  scene: [BootScene, PreloadScene, HomeScene, CinematicScene, PowerUpScene, GameScene, TreeScene, DangerScene, TiredScene, FruitForestScene, SkyScene, StormScene, MagicForestScene, RakshasaScene, MountainScene, RiverScene, RiverBossScene, DronagiriScene, ReturnScene, MapScene, PauseScene]
 };
 
 // Exposed so headless preview tooling (tools/shot.mjs) can jump straight to a

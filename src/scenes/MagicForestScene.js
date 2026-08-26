@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENES 15–16 — LANDING / MAGICAL FOREST (Chapter 4→5 breather)
 // After the storm Hanuman sets down in an enchanted grove. Two resource systems
@@ -130,6 +131,7 @@ export default class MagicForestScene extends Phaser.Scene {
   }
 
   buildFinish(x) {
+    addFinishGate(this, x, GROUND_Y);
     this.add.circle(x, GROUND_Y - 120, 64, 0xbfffe0, 0.3).setDepth(-4);
     const g = this.add.star(x, GROUND_Y - 120, 6, 18, 40, 0xdfffe0).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 7000, repeat: -1 });
@@ -230,7 +232,7 @@ export default class MagicForestScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Rested in the grove', 'Tap to continue', '#bfffe0', false, 'RakshasaScene');
+    enterFinishGate(this, () => this.showEndCard('Rested in the grove', 'Tap to continue', '#bfffe0', false, 'RakshasaScene'));
   }
 
   loseLevel(reason) {

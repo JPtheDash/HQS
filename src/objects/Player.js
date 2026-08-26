@@ -13,6 +13,7 @@ import Phaser from 'phaser';
 // flight) for up to FLY_MAX ms of held time, refuelled on landing.
 const FLY_MAX = 2500;
 const FLY_RISE = -260;
+const CLIMB_SPEED = 230;
 const BASELINE = 360; // baked feet line inside each 372px cell
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
@@ -22,16 +23,22 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     Player.createAnims(scene);
 
-    const targetHeight = 230;
+    // The in-game sheet is either the freshly-baked new art (8x5, 224x188 cells,
+    // registry 'heroBaked') or the original hero6 fallback (8x5, 430x372).
+    const cell = scene.game.registry.get('heroCell');
+    const baked = scene.game.registry.get('heroBaked') && cell;
+    this.baseline = baked ? cell.h - cell.pad : BASELINE;
+
+    const targetHeight = baked ? 250 : 230;
     this.setScale(targetHeight / this.height);
     this.baseScaleX = this.scaleX;
     this.baseScaleY = this.scaleY;
 
-    // Slim body reaching the baked baseline so the feet sit on the ground.
+    // Slim body reaching the feet baseline so the feet sit on the ground.
     const bw = this.width * 0.30;
     const bh = this.height * 0.58;
     this.body.setSize(bw, bh);
-    this.body.setOffset((this.width - bw) / 2, BASELINE - bh);
+    this.body.setOffset((this.width - bw) / 2, this.baseline - bh);
     this.setCollideWorldBounds(true);
     this.setDepth(6);
     this.halfH = (bh * this.scaleY) / 2;
@@ -48,6 +55,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.wantFly = false;
     this.flying = false;
     this.wasOnGround = true;
+    this.onVine = false;
     this.spinning = false;
     this.throwing = false;
     this.currentAnim = '';
@@ -71,11 +79,22 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   static createAnims(scene) {
     const a = scene.anims;
     if (a.exists('hero-idle')) return;
-    a.create({ key: 'hero-idle', frames: a.generateFrameNumbers('hero', { frames: [0, 1, 2, 3, 4, 5, 6, 7] }), frameRate: 8, repeat: -1 });
-    a.create({ key: 'hero-run', frames: a.generateFrameNumbers('hero', { frames: [8, 9, 10, 11, 12, 13] }), frameRate: 13, repeat: -1 });
-    a.create({ key: 'hero-jump', frames: a.generateFrameNumbers('hero', { frames: [16, 17, 18, 19, 20, 21] }), frameRate: 12, repeat: 0 });
-    a.create({ key: 'hero-fly', frames: a.generateFrameNumbers('hero', { frames: [24, 25, 26, 27, 28, 29] }), frameRate: 9, repeat: -1 });
-    a.create({ key: 'hero-throw', frames: a.generateFrameNumbers('hero', { frames: [32, 33, 34, 35, 36, 37] }), frameRate: 18, repeat: 0 });
+    const gen = (frames) => a.generateFrameNumbers('hero', { frames });
+    if (scene.game.registry.get('heroBaked')) {
+      // New baked sheet: 8 frames per row (idle|run|jump|fly|throw), throw = 6.
+      a.create({ key: 'hero-idle', frames: gen([0, 1, 2, 3, 4, 5, 6, 7]), frameRate: 9, repeat: -1 });
+      a.create({ key: 'hero-run', frames: gen([8, 9, 10, 11, 12, 13, 14, 15]), frameRate: 14, repeat: -1 });
+      a.create({ key: 'hero-jump', frames: gen([16, 17, 18, 19, 20, 21, 22, 23]), frameRate: 12, repeat: 0 });
+      a.create({ key: 'hero-fly', frames: gen([24, 25, 26, 27, 28, 29, 30, 31]), frameRate: 10, repeat: -1 });
+      a.create({ key: 'hero-throw', frames: gen([32, 33, 34, 35, 36, 37]), frameRate: 16, repeat: 0 });
+      return;
+    }
+    // hero6 fallback (original ranges).
+    a.create({ key: 'hero-idle', frames: gen([0, 1, 2, 3, 4, 5, 6, 7]), frameRate: 8, repeat: -1 });
+    a.create({ key: 'hero-run', frames: gen([8, 9, 10, 11, 12, 13]), frameRate: 13, repeat: -1 });
+    a.create({ key: 'hero-jump', frames: gen([16, 17, 18, 19, 20, 21]), frameRate: 12, repeat: 0 });
+    a.create({ key: 'hero-fly', frames: gen([24, 25, 26, 27, 28, 29]), frameRate: 9, repeat: -1 });
+    a.create({ key: 'hero-throw', frames: gen([32, 33, 34, 35, 36, 37]), frameRate: 18, repeat: 0 });
   }
 
   buildFx(scene) {
@@ -144,6 +163,24 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
     if (!this.alive) return;
+
+    // Climbing a vine: gravity off, ▲ (wantFly) climbs up, otherwise grip in
+    // place. Horizontal movement still works so you can hop off. The scene sets
+    // `onVine` each frame from the vine overlap.
+    if (this.onVine) {
+      this.body.setAllowGravity(false);
+      this.flyLeft = this.flyMax;
+      this.jumpsUsed = 0;
+      const climbing = this.wantFly;
+      this.setVelocityY(climbing ? -CLIMB_SPEED : 0);
+      this.flying = false; this.trail.stop();
+      if (!this.spinning && !this.throwing) {
+        this.setAnim(climbing || Math.abs(this.body.velocity.x) > 20 ? 'hero-run' : 'hero-idle');
+      }
+      this.wasOnGround = false;
+      return;
+    }
+    this.body.setAllowGravity(true);
 
     const onGround = this.body.blocked.down;
     if (onGround) {

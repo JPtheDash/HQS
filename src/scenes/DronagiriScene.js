@@ -50,7 +50,10 @@ export default class DronagiriScene extends Phaser.Scene {
     this.cameras.main.setFollowOffset(-80, 60);
 
     this.hud = new Hud(this, { maxHealth: 3 });
-    this.hud.setEnergy(this.energy);
+    // Exploration scene: no energy drain and no countdown — hide both gauges so
+    // the Sanjeevini clue counter owns the center-top slot without overlap.
+    this.hud.hideEnergy();
+    this.hud.hideTime();
     this.buildClueUI();
     this.buildControls();
     this.buildSigns();
@@ -141,7 +144,8 @@ export default class DronagiriScene extends Phaser.Scene {
   }
 
   buildClueUI() {
-    this.clueText = this.add.text(GAME_WIDTH / 2, 40, 'Sanjeevini clues  0 / 3', { fontFamily: 'Georgia, serif', fontSize: '24px', color: '#ffe07a', fontStyle: 'bold', stroke: '#1a2a4a', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(1200);
+    // Sits between the top-left health gauge and the top-right pause button.
+    this.clueText = this.add.text(452, 40, 'Sanjeevini clues  0 / 3', { fontFamily: 'Georgia, serif', fontSize: '23px', color: '#ffe07a', fontStyle: 'bold', stroke: '#1a2a4a', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(1200);
   }
 
   buildControls() {

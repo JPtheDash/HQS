@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENE 10 — HANUMAN GETS TIRED (Chapter 1 finale)
 // The long journey wears him down: ENERGY drains steadily, and as it falls his
@@ -135,6 +136,7 @@ export default class TiredScene extends Phaser.Scene {
   }
 
   buildFinish(x) {
+    addFinishGate(this, x, GROUND_Y);
     this.add.circle(x, GROUND_Y - 120, 60, 0xffe9a8, 0.25).setDepth(-4);
     const herb = this.textures.exists('herb') ? this.add.image(x, GROUND_Y - 120, 'herb').setDepth(-3)
       : this.add.star(x, GROUND_Y - 120, 5, 16, 34, 0x6fe06f).setDepth(-3);
@@ -238,7 +240,7 @@ export default class TiredScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('You made it through!', 'Tap to continue', '#ffe9a8', false, 'FruitForestScene');
+    enterFinishGate(this, () => this.showEndCard('You made it through!', 'Tap to continue', '#ffe9a8', false, 'FruitForestScene'));
   }
 
   loseLevel(reason) {

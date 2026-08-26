@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENES 19–20 — HIMALAYAN MOUNTAIN PASS / DANGEROUS CLIFFS (Chapter 7)
 // Cold precision platforming across narrow snow ledges with jumpable gaps, under
@@ -19,7 +20,8 @@ export default class MountainScene extends Phaser.Scene {
   }
 
   create() {
-    ['ground'].forEach((k) => stripBackground(this, k));
+    // ground.png has real alpha (transparent sky) — stripping erases its dirt,
+    // so it is never stripped (see the ledge/ground note in GameScene).
 
     this.finished = false;
     this.health = 3;
@@ -160,6 +162,7 @@ export default class MountainScene extends Phaser.Scene {
   }
 
   buildFinish(x) {
+    addFinishGate(this, x, GROUND_Y);
     this.add.circle(x, GROUND_Y - 120, 60, 0xffe9a8, 0.25).setDepth(-4);
     const g = this.add.star(x, GROUND_Y - 120, 5, 16, 34, 0xffe9a8).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 6000, repeat: -1 });
@@ -265,7 +268,7 @@ export default class MountainScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Over the pass!', 'Tap to continue', '#ffe9a8', false, 'RiverScene');
+    enterFinishGate(this, () => this.showEndCard('Over the pass!', 'Tap to continue', '#ffe9a8', false, 'RiverScene'));
   }
 
   loseLevel(reason) {

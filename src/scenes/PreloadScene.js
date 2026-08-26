@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CENTER_X, CENTER_Y, COLORS } from '../config/gameConfig.js';
+import { cleanGroundSky } from '../utils/cleanTexture.js';
 
 // PreloadScene loads every asset the game uses up front and shows a simple
 // progress bar while it does. As you send assets, they get queued in
@@ -42,6 +43,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('boulder', 'assets/game/boulder.png');
     this.load.image('finish-gate', 'assets/game/finish-gate.png');
     this.load.image('herb', 'assets/game/herb.png');
+    this.load.image('thorns', 'assets/game/thorns.png');   // ornate thorn-vine hazard
+    this.load.image('fire-new', 'assets/game/fire-new.png'); // wide flame hazard
     this.load.image('bg1', 'assets/game/bg1.png');   // Ashoka Vatika garden backdrop
     this.load.image('bg2', 'assets/game/bg2.png');   // temple-garden backdrop
     this.load.image('fire', 'assets/game/fire.png'); // flame hazard sprite
@@ -62,6 +65,19 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('gada', 'assets/game/gada.png'); // thrown mace projectile
     this.load.image('rakshasa', 'assets/game/rakshasa.png'); // demon enemy
     this.load.image('boss', 'assets/game/boss.png'); // river guardian boss
+    // ---- Ornate UI buttons (pause / resume / reset / home) ------------
+    this.load.image('btn-pause', 'assets/game/btn-pause.png');
+    this.load.image('btn-resume', 'assets/game/btn-resume.png');
+    this.load.image('btn-reset', 'assets/game/btn-reset.png');
+    this.load.image('btn-home', 'assets/game/btn-home.png');
+    // ---- Storm level art (cloud platforms, hazard clouds, lightning) ---
+    this.load.image('whitecloud', 'assets/game/whitecloud.png'); // landable cloud platform
+    this.load.image('stormcloud', 'assets/game/stormcloud.png'); // dark hazard cloud
+    this.load.image('thunder', 'assets/game/thunder.png');       // lightning strike
+    // ---- Ornate HUD gauge art (icon + full/empty bar combos) ----------
+    this.load.image('hud-heart', 'assets/game/hud-heart.png');
+    this.load.image('hud-energy', 'assets/game/hud-energy.png');
+    this.load.image('hud-timer', 'assets/game/hud-timer.png');
 
     // ---- Music ------------------------------------------------------
     this.load.audio('story-music', 'assets/audio/hanumanstory.mp3');
@@ -70,6 +86,11 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
+    // ground.png is an opaque strip (grey sky + grass + dirt); clear just the
+    // sky once here so every scene's tiled ground shows the parallax behind it
+    // without eating the dirt. After this it has real alpha and the generic
+    // stripBackground('ground') calls in scenes auto-skip it.
+    cleanGroundSky(this);
     this.scene.start('HomeScene');
   }
 
@@ -89,9 +110,14 @@ export default class PreloadScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Hanuman runs above the bar while assets load.
+    // Hanuman runs above the bar while assets load. Prefer the run cycle baked
+    // from the user's newer hero sheet ('load-run'); fall back to hero6.
     let runner = null;
-    if (this.textures.exists('hero')) {
+    if (this.textures.exists('hero-load-run') && this.anims.exists('load-run')) {
+      runner = this.add.sprite(CENTER_X, y - 120, 'hero-load-run', 0).setOrigin(0.5, 1);
+      runner.setScale(300 / runner.height);
+      runner.play('load-run');
+    } else if (this.textures.exists('hero')) {
       runner = this.add.sprite(CENTER_X, y - 130, 'hero').setOrigin(0.5, 1);
       runner.setScale(260 / runner.height);
       if (this.anims.exists('hero-run')) runner.play('hero-run');

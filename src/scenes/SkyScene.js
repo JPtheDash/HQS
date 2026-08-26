@@ -4,6 +4,8 @@ import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
+import { stripCheckerGrey } from '../utils/cleanTexture.js';
 
 // SCENES 12–13 — SKY JOURNEY (Chapter 3, flying)
 // The traversal flips from running to flying: hop between cloud and floating-rock
@@ -31,6 +33,9 @@ export default class SkyScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WORLD_W, GAME_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_W, GAME_HEIGHT);
     this.cameras.main.fadeIn(500, 0, 0, 0);
+
+    // Cloud art ships with a baked grey transparency checker — strip it.
+    ['whitecloud', 'stormcloud'].forEach((k) => stripCheckerGrey(this, k));
 
     this.buildBackground();
     this.solids = this.physics.add.staticGroup();
@@ -108,9 +113,13 @@ export default class SkyScene extends Phaser.Scene {
   }
 
   makeCloud(x, y, w) {
-    if (this.textures.exists('cloud')) {
-      const img = this.add.image(x, y, 'cloud').setOrigin(0.5, 0).setDepth(-5);
-      img.setScale(w / img.width);
+    if (this.textures.exists('whitecloud')) {
+      // Fluffy white cloud platform. Lift the art so its visible top meets the
+      // platform line (the cloud sits ~26% down the sparkle-padded image).
+      const img = this.add.image(x, y, 'whitecloud').setOrigin(0.5, 0).setDepth(-5);
+      img.setScale((w * 1.5) / img.width);
+      img.y = y - img.displayHeight * 0.26;
+      this.addPlatformBody(x, y + 12, w * 0.72);
     } else {
       const g = this.add.graphics().setDepth(-5);
       g.fillStyle(0xffffff, 0.98);
@@ -118,8 +127,8 @@ export default class SkyScene extends Phaser.Scene {
       for (let cx = -w / 2; cx <= w / 2; cx += w / 6) g.fillCircle(x + cx, y + 24, 34);
       g.fillRoundedRect(x - w / 2, y + 8, w, h, 22);
       g.fillStyle(0xdfeaf5, 0.9); g.fillRoundedRect(x - w / 2, y + 34, w, 22, 14);
+      this.addPlatformBody(x, y + 14, w * 0.86);
     }
-    this.addPlatformBody(x, y + 14, w * 0.86);
   }
 
   makeRock(x, y, w) {
@@ -143,19 +152,21 @@ export default class SkyScene extends Phaser.Scene {
   }
 
   makeStormCloud(x, y) {
-    let display;
     if (this.textures.exists('stormcloud')) {
-      display = this.add.image(x, y, 'stormcloud').setDepth(4);
-      display.setScale(120 / display.width);
-    } else {
-      const g = this.add.graphics().setDepth(4);
-      g.fillStyle(0x4a4a6a, 0.96);
-      for (let cx = -60; cx <= 60; cx += 30) g.fillCircle(x + cx, y, 34);
-      g.fillRoundedRect(x - 70, y, 140, 40, 18);
-      g.fillStyle(0xffe23b, 1); g.fillTriangle(x - 6, y + 34, x + 10, y + 34, x - 2, y + 70); // bolt
-      display = g;
-      this.tweens.add({ targets: g, alpha: 0.6, duration: 500, yoyo: true, repeat: -1 });
+      const img = this.add.image(x, y, 'stormcloud').setDepth(4);
+      img.setScale(300 / img.width);
+      this.tweens.add({ targets: img, y: y - 14, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      const zone = this.add.zone(x, y, img.displayWidth * 0.72, img.displayHeight * 0.58);
+      this.physics.add.existing(zone, true);
+      this.hazards.add(zone);
+      return;
     }
+    const g = this.add.graphics().setDepth(4);
+    g.fillStyle(0x4a4a6a, 0.96);
+    for (let cx = -60; cx <= 60; cx += 30) g.fillCircle(x + cx, y, 34);
+    g.fillRoundedRect(x - 70, y, 140, 40, 18);
+    g.fillStyle(0xffe23b, 1); g.fillTriangle(x - 6, y + 34, x + 10, y + 34, x - 2, y + 70); // bolt
+    this.tweens.add({ targets: g, alpha: 0.6, duration: 500, yoyo: true, repeat: -1 });
     const zone = this.add.zone(x, y + 10, 150, 90);
     this.physics.add.existing(zone, true);
     this.hazards.add(zone);
@@ -203,6 +214,7 @@ export default class SkyScene extends Phaser.Scene {
   }
 
   buildFinish(x, y) {
+    addFinishGate(this, x, y + 40, { bottomOrigin: false, height: 300 });
     this.add.circle(x, y, 70, 0xffe9a8, 0.25).setDepth(-4);
     const g = this.add.star(x, y, 6, 22, 46, 0xfff2c0).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 6000, repeat: -1 });
@@ -314,7 +326,7 @@ export default class SkyScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Across the sky!', 'Tap to continue', '#ffe9a8', false, 'StormScene');
+    enterFinishGate(this, () => this.showEndCard('Across the sky!', 'Tap to continue', '#ffe9a8', false, 'StormScene'));
   }
 
   loseLevel(reason) {

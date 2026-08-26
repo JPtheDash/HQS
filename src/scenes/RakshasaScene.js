@@ -5,6 +5,7 @@ import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
 import { stripBackground } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENES 17–18 — RAKSHASA ENCOUNTER & CHASE (Chapter 5)
 // The forest turns hostile: rakshasa demons block the path. JUMP over them, or
@@ -137,6 +138,7 @@ export default class RakshasaScene extends Phaser.Scene {
   }
 
   buildFinish(x) {
+    addFinishGate(this, x, GROUND_Y);
     this.add.circle(x, GROUND_Y - 120, 60, 0xffe9a8, 0.25).setDepth(-4);
     const g = this.add.star(x, GROUND_Y - 120, 5, 16, 34, 0xffe9a8).setDepth(-3);
     this.tweens.add({ targets: g, angle: 360, duration: 6000, repeat: -1 });
@@ -288,7 +290,7 @@ export default class RakshasaScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Escaped the demons!', 'Tap to continue', '#ffe9a8', false, 'MountainScene');
+    enterFinishGate(this, () => this.showEndCard('Escaped the demons!', 'Tap to continue', '#ffe9a8', false, 'MountainScene'));
   }
 
   loseLevel(reason) {

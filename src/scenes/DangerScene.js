@@ -3,8 +3,9 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
-import { stripBackground } from '../utils/cleanTexture.js';
+import { stripBackground, stripCheckerGrey } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
+import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
 // SCENE 9 — FIRST DANGER (Chapter 1, part 3)
 // The forest turns hostile. Three hazard types are introduced one at a time so
@@ -147,30 +148,36 @@ export default class DangerScene extends Phaser.Scene {
   }
 
   buildThorns(xs) {
+    stripBackground(this, 'thorns');
     xs.forEach((x) => {
       const y = GROUND_Y;
-      const g = this.add.graphics().setDepth(-4);
-      g.fillStyle(0x2f6b2a, 1); g.fillEllipse(x, y - 12, 120, 54);
-      g.fillStyle(0x274d1f, 1);
-      for (let i = -3; i <= 3; i++) g.fillTriangle(x + i * 16 - 6, y - 18, x + i * 16 + 6, y - 18, x + i * 16, y - 62);
-      g.fillStyle(0x8a2b2b, 1);
-      for (let i = -3; i <= 3; i++) g.fillCircle(x + i * 16, y - 60, 3);
-      const zone = this.add.zone(x, y - 34, 110, 60);
+      const img = this.add.image(x, y + 12, 'thorns').setOrigin(0.5, 1).setDepth(-4);
+      img.setScale(150 / img.height);
+      const zone = this.add.zone(x, y - img.displayHeight * 0.4, img.displayWidth * 0.62, img.displayHeight * 0.7);
       this.physics.add.existing(zone, true);
       this.hazards.add(zone);
     });
   }
 
   buildFires(xs) {
+    const fireKey = this.textures.exists('fire-new') ? 'fire-new' : 'fire';
+    stripCheckerGrey(this, fireKey); // remove the baked dark-grey checker background
+    // The flame art has faint embers all the way down, so instead of trimming we
+    // anchor the sprite's ORIGIN at the bright flame base (baseFrac down the
+    // texture). Placed at GROUND_Y, the flames sit on the ground and the flicker
+    // wobble scales around that base instead of lifting off it.
+    const baseFrac = this.fireBaseFrac(fireKey);
     xs.forEach((x) => {
-      const zone = this.add.zone(x, GROUND_Y - 70, 100, 130);
+      // Depth 5 keeps it in front of the ground but behind Hanuman (depth 6).
+      // The flame base is anchored down near the bottom of the screen so the
+      // fire rises up out of the ground rather than hovering on the grass.
+      const img = this.add.image(x, GAME_HEIGHT - 30, fireKey).setOrigin(0.5, baseFrac).setDepth(5);
+      img.setScale(230 / img.height);
+      const flameH = img.displayHeight * baseFrac; // visible height above the base
+      const zone = this.add.zone(x, (GAME_HEIGHT - 30) - flameH * 0.5, img.displayWidth * 0.5, flameH * 0.9);
       this.physics.add.existing(zone, true);
       zone.active = true;
       this.hazards.add(zone);
-      // The baked flame sprite, anchored at its base on the ground. Depth 5
-      // keeps it in front of the ground but behind Hanuman (depth 6).
-      const img = this.add.image(x, GROUND_Y + 8, 'fire').setOrigin(0.5, 1).setDepth(5);
-      img.setScale(165 / img.height);
       img.baseScaleX = img.scaleX; img.baseScaleY = img.scaleY;
       const draw = () => img.setVisible(zone.active);
       draw();
@@ -179,6 +186,28 @@ export default class DangerScene extends Phaser.Scene {
       this.tweens.add({ targets: img, scaleY: img.baseScaleY * 1.16, scaleX: img.baseScaleX * 0.9, duration: 230, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       this.tweens.add({ targets: img, alpha: 0.8, duration: 140, yoyo: true, repeat: -1 });
     });
+  }
+
+  // Fraction (0..1) down the flame texture where the bright flame base sits,
+  // used as the sprite origin so the fire plants on the ground (ignores the
+  // faint low-alpha embers/smoke that pad the bottom of the art). Cached.
+  fireBaseFrac(key) {
+    const cached = this.game.registry.get('__fireBaseFrac_' + key);
+    if (cached != null) return cached;
+    const g = this.textures.get(key).getSourceImage();
+    const c = document.createElement('canvas');
+    c.width = g.width; c.height = g.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(g, 0, 0);
+    const d = ctx.getImageData(0, 0, g.width, g.height).data;
+    let bot = -1;
+    for (let y = g.height - 1; y >= 0 && bot < 0; y--) {
+      let n = 0;
+      for (let x = 0; x < g.width; x++) if (d[(y * g.width + x) * 4 + 3] > 55) { if (++n > 4) { bot = y; break; } }
+    }
+    const frac = bot < 0 ? 1 : (bot + 1) / g.height;
+    this.game.registry.set('__fireBaseFrac_' + key, frac);
+    return frac;
   }
 
   toggleFires() {
@@ -357,10 +386,7 @@ export default class DangerScene extends Phaser.Scene {
 
   buildFinish(x) {
     this.add.circle(x, GROUND_Y - 120, 60, 0xffe9a8, 0.2).setDepth(-4);
-    const gate = this.textures.exists('finish-gate')
-      ? this.add.image(x, GROUND_Y, 'finish-gate').setOrigin(0.5, 1).setDepth(-6)
-      : this.add.rectangle(x, GROUND_Y, 60, 240, 0xffe9a8).setOrigin(0.5, 1);
-    if (gate.width) { stripBackground(this, 'finish-gate'); gate.setTexture('finish-gate'); gate.setScale(340 / gate.width); }
+    addFinishGate(this, x, GROUND_Y);
     this.finishZone = new Phaser.Geom.Rectangle(x - 40, GROUND_Y - 240, 80, 240);
   }
 
@@ -482,7 +508,7 @@ export default class DangerScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.player.stopMoving();
-    this.showEndCard('Danger survived!', 'Tap to continue', '#ffe9a8', false, 'TiredScene');
+    enterFinishGate(this, () => this.showEndCard('Danger survived!', 'Tap to continue', '#ffe9a8', false, 'TiredScene'));
   }
 
   loseLevel(reason) {

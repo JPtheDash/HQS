@@ -49,8 +49,10 @@ export default class RiverBossScene extends Phaser.Scene {
     this.physics.add.overlap(this.gadas, this.boss, this.onGadaBoss, null, this);
 
     this.hud = new Hud(this, { maxHealth: 3 });
-    this.hud.setEnergy(this.energy);
-    this.hud.hideTime && this.hud.hideTime();
+    // No energy or countdown in the boss arena — hide them so the boss HP bar
+    // owns the center-top slot (otherwise the ENERGY bar overlaps it).
+    this.hud.hideEnergy();
+    this.hud.hideTime();
     this.buildBossBar();
     this.buildControls();
     this.buildSigns();
@@ -87,6 +89,7 @@ export default class RiverBossScene extends Phaser.Scene {
     this.boss = this.physics.add.staticImage(GAME_WIDTH - 150, GROUND_Y - 10, this.textures.exists(key) ? key : 'boulder').setOrigin(0.5, 1);
     const dispH = 420;
     this.boss.setScale(dispH / this.boss.height);
+    this.boss.setFlipX(true); // face left, toward Hanuman (art faces right by default)
     this.boss.body.setSize(this.boss.width * 0.5, this.boss.height * 0.7);
     this.boss.refreshBody();
     this.boss.setDepth(4);
@@ -96,11 +99,13 @@ export default class RiverBossScene extends Phaser.Scene {
   }
 
   buildBossBar() {
-    const w = 360;
-    this.add.rectangle(GAME_WIDTH / 2, 60, w + 8, 26, 0x000000, 0.5).setScrollFactor(0).setDepth(1200).setStrokeStyle(2, 0x9ad0ff, 0.8);
-    this.bossFill = this.add.rectangle(GAME_WIDTH / 2 - w / 2, 60, w, 18, 0x3fb0d8).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1201);
+    // Sits between the top-left health gauge and the top-right pause button.
+    const w = 344;
+    const cx = 448;
+    this.add.rectangle(cx, 60, w + 8, 26, 0x000000, 0.5).setScrollFactor(0).setDepth(1200).setStrokeStyle(2, 0x9ad0ff, 0.8);
+    this.bossFill = this.add.rectangle(cx - w / 2, 60, w, 18, 0x3fb0d8).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1201);
     this.bossBarW = w;
-    this.add.text(GAME_WIDTH / 2, 36, 'RIVER GUARDIAN', { fontFamily: 'Georgia, serif', fontSize: '20px', color: '#bfeaff', fontStyle: 'bold', stroke: '#0a2030', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(1201);
+    this.add.text(cx, 36, 'RIVER GUARDIAN', { fontFamily: 'Georgia, serif', fontSize: '20px', color: '#bfeaff', fontStyle: 'bold', stroke: '#0a2030', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(1201);
   }
 
   bossAttack() {
@@ -171,7 +176,12 @@ export default class RiverBossScene extends Phaser.Scene {
     this.time.delayedCall(1500, () => { if (g.active) g.destroy(); });
   }
 
-  onGadaBoss(gada, boss) {
+  onGadaBoss(a, b) {
+    // Phaser calls the overlap handler for a (group, sprite) pair as
+    // (sprite, groupChild) — i.e. (boss, gada) — so identify each by identity
+    // rather than trusting positional order.
+    const boss = a === this.boss ? a : b;
+    const gada = a === this.boss ? b : a;
     if (!boss.alive || gada._hit) return;
     gada._hit = true;
     gada.destroy();
