@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
 import { playMusic, GAME_MUSIC } from '../audio/music.js';
 import Player from '../objects/Player.js';
 import Hud from '../ui/Hud.js';
-import { stripBackground } from '../utils/cleanTexture.js';
+import { stripBackground, stripCheckerGrey, trimTransparent } from '../utils/cleanTexture.js';
 import { fallRespawn } from '../utils/respawn.js';
 import { addFinishGate, enterFinishGate } from '../utils/finishGate.js';
 
@@ -22,6 +22,13 @@ export default class RakshasaScene extends Phaser.Scene {
 
   create() {
     ['ground'].forEach((k) => stripBackground(this, k));
+    // Prefer the animated demon sheet; fall back to the static art (which ships
+    // with a dark checker background, so strip + trim it).
+    this.rakAnim = this.bakeRakshasaSheet();
+    if (!this.rakAnim && this.textures.exists('rakshasa')) {
+      stripCheckerGrey(this, 'rakshasa');
+      trimTransparent(this, 'rakshasa');
+    }
 
     this.finished = false;
     this.health = 3;
@@ -106,20 +113,87 @@ export default class RakshasaScene extends Phaser.Scene {
   }
 
   spawnFoe(x, chase) {
-    const key = this.textures.exists('rakshasa') ? 'rakshasa' : 'boulder';
-    const dispH = 170;
-    // Default origin (0.5,0.5); centre placed so the feet sit on the ground.
-    const f = this.foes.create(x, GROUND_Y - dispH / 2, key);
-    f.setScale(dispH / f.height);
-    const bw = f.width * 0.5, bh = f.height * 0.82;
+    const anim = this.rakAnim;
+    const key = anim ? 'rak-anim' : (this.textures.exists('rakshasa') ? 'rakshasa' : 'boulder');
+    const dispH = 280; // taller than Hanuman so the demons loom over him
+    // Origin at the feet so the demon plants on the ground at any scale.
+    const f = this.foes.create(x, GROUND_Y, key, anim ? 0 : undefined);
+    f.setOrigin(0.5, anim ? this.rakFeetFrac : 1);
+    f.setScale(dispH / (anim ? this.rakCellH : f.height));
+    if (!anim) f.y = GROUND_Y - f.displayHeight / 2; // static art: centre origin
+    const bw = f.width * 0.28, bh = f.height * (anim ? 0.62 : 0.82);
     f.body.setSize(bw, bh);
-    f.body.setOffset((f.width - bw) / 2, (f.height - bh) / 2);
+    f.body.setOffset((f.width - bw) / 2, (anim ? this.rakFeetFrac * f.height - bh : (f.height - bh) / 2));
     f.setDepth(5);
     f.alive = true;
-    f.chase = chase;
     f.baseY = f.y;
-    if (chase) f.setVelocityX(-70);
-    else this.tweens.add({ targets: f, y: f.y - 8, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }); // menace bob
+    f.lunging = false;
+    if (anim) f.play('rak-walk');
+    // A stationary "sooner" lunge for the ones that used to just block, so the
+    // first ones Hanuman meets already feel aggressive.
+    f.nextLunge = this.time.now + (chase ? 900 : 1600);
+  }
+
+  // The demon rears back, plays its attack swing, then snaps forward to swipe at
+  // Hanuman. The player/foe overlap does the actual damage.
+  foeLunge(f, dir) {
+    if (!f.active || !f.alive) return;
+    f.lunging = true;
+    if (this.rakAnim) { f.play('rak-attack'); f.once('animationcomplete-rak-attack', () => { if (f.active && f.alive) f.play('rak-walk'); }); }
+    else f.setTint(0xffb0b0);
+    f.setVelocityX(-dir * 55);                       // wind-up
+    this.time.delayedCall(150, () => {
+      if (!f.active || !f.alive) { f.lunging = false; return; }
+      f.setVelocityX(dir * 360);                     // lunge forward
+      this.time.delayedCall(190, () => {
+        if (f.active) { f.setVelocityX(0); if (!this.rakAnim) f.clearTint(); }
+        f.lunging = false;
+      });
+    });
+  }
+
+  // Bake the animated demon sheet into a 'rak-anim' texture with walk + attack
+  // rows, and register 'rak-walk' / 'rak-attack'. Returns true on success.
+  bakeRakshasaSheet() {
+    const stored = this.game.registry.get('rakCell');
+    if (this.anims.exists('rak-walk') && stored) { this.rakCellH = stored.h; this.rakFeetFrac = stored.feetFrac; return true; }
+    if (!this.textures.exists('rakshasa-sheet')) return false;
+    const src = this.textures.get('rakshasa-sheet').getSourceImage();
+    const w = src.width, h = src.height;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d'); cx.drawImage(src, 0, 0);
+    const d = cx.getImageData(0, 0, w, h).data;
+    const A = (px, py) => d[(py * w + px) * 4 + 3];
+    const extract = (y0, y1, minH, count) => {
+      const bw = w, bh = y1 - y0, lab = new Uint8Array(bw * bh), out = [];
+      for (let yy = 0; yy < bh; yy++) for (let xx = 0; xx < bw; xx++) {
+        if (lab[yy * bw + xx] || A(xx, y0 + yy) <= 60) continue;
+        let minx = xx, maxx = xx, miny = yy, maxy = yy, cnt = 0; const st = [xx, yy]; lab[yy * bw + xx] = 1;
+        while (st.length) { const py = st.pop(), px = st.pop(); cnt++;
+          if (px < minx) minx = px; if (px > maxx) maxx = px; if (py < miny) miny = py; if (py > maxy) maxy = py;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = px + dx, ny = py + dy; if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue; const p = ny * bw + nx; if (!lab[p] && A(nx, y0 + ny) > 60) { lab[p] = 1; st.push(nx, ny); } } }
+        if (cnt > 2000 && (maxy - miny) >= minH) out.push({ x: minx, y: y0 + miny, w: maxx - minx + 1, h: maxy - miny + 1 });
+      }
+      out.sort((a, b) => a.x - b.x); return out.slice(0, count);
+    };
+    const walk = extract(289, 510, 110, 6);  // run row
+    const atk = extract(756, 1007, 110, 6);  // attack row
+    if (walk.length < 3 || atk.length < 2) return false;
+    const cols = 6, CW = 320, PAD = 8;
+    const CH = Math.max(...walk.concat(atk).map((c) => c.h)) + PAD * 2;
+    const out = document.createElement('canvas'); out.width = CW * cols; out.height = CH * 2;
+    const ox = out.getContext('2d');
+    const place = (bank, row) => bank.forEach((c, col) => { ox.drawImage(cv, c.x, c.y, c.w, c.h, col * CW + (CW - c.w) / 2, row * CH + (CH - PAD - c.h), c.w, c.h); });
+    place(walk, 0); place(atk, 1);
+    const tex = this.textures.createCanvas('rak-anim', out.width, out.height);
+    tex.getContext().drawImage(out, 0, 0); tex.refresh();
+    for (let r = 0; r < 2; r++) for (let cc = 0; cc < cols; cc++) tex.add(r * cols + cc, 0, cc * CW, r * CH, CW, CH);
+    this.anims.create({ key: 'rak-walk', frames: walk.map((_, i) => ({ key: 'rak-anim', frame: i })), frameRate: 9, repeat: -1 });
+    this.anims.create({ key: 'rak-attack', frames: atk.map((_, i) => ({ key: 'rak-anim', frame: cols + i })), frameRate: 12, repeat: 0 });
+    this.rakCellH = CH;
+    this.rakFeetFrac = (CH - PAD) / CH;
+    this.game.registry.set('rakCell', { h: CH, feetFrac: this.rakFeetFrac });
+    return true;
   }
 
   buildCollectibles() {
@@ -149,14 +223,17 @@ export default class RakshasaScene extends Phaser.Scene {
   throwGadaSwipe() {
     if (this.finished || !this.player.alive || this.player.throwing) return;
     if (this.time.now < this.gadaCooldown) return;
+    const facing = this.player.facing || 1; // throw the way Hanuman is facing
     let target = null, best = 820 * 820;
     this.foes.children.iterate((f) => {
-      if (!f || !f.active || f.alive === false || f.x < this.player.x - 40) return;
-      const dx = f.x - this.player.x, dy = f.y - this.player.y, d2 = dx * dx + dy * dy;
+      if (!f || !f.active || f.alive === false) return;
+      const dx = f.x - this.player.x;
+      if (dx * facing < -40) return; // only foes in the facing direction
+      const dy = f.y - this.player.y, d2 = dx * dx + dy * dy;
       if (d2 < best) { best = d2; target = f; }
     });
     this.gadaCooldown = this.time.now + 450;
-    const tx = target ? target.x : this.player.x + 460;
+    const tx = target ? target.x : this.player.x + facing * 460;
     const ty = target ? target.y - 60 : this.player.y - 20;
     this.player.throwGada(() => this.spawnGada(tx, ty));
   }
@@ -277,8 +354,23 @@ export default class RakshasaScene extends Phaser.Scene {
     else if (right && !left) this.player.moveRight();
     else this.player.stopMoving();
 
-    // Chasers keep advancing at ground level.
-    this.foes.children.iterate((f) => { if (f && f.alive && f.chase) { f.y = f.baseY; } });
+    // Rakshasas stalk toward Hanuman and lunge to attack when close.
+    const px = this.player.x;
+    this.foes.children.iterate((f) => {
+      if (!f || !f.alive) return;
+      f.y = f.baseY;                       // stay on the ground
+      const dx = px - f.x;
+      const dir = dx < 0 ? -1 : 1;
+      // Face Hanuman. The animated sheet faces right by default, the static art left.
+      f.setFlipX(this.rakAnim ? dir < 0 : dir > 0);
+      if (f.lunging) return;
+      if (Math.abs(dx) > 95) {
+        f.setVelocityX(dir * 85);          // creep toward him
+      } else {
+        f.setVelocityX(0);
+        if (this.time.now > (f.nextLunge || 0)) { f.nextLunge = this.time.now + 1300; this.foeLunge(f, dir); }
+      }
+    });
 
     this.dark.alpha = Phaser.Math.Clamp((this.player.x - 700) / (WORLD_W - 700), 0, 1) * 0.35;
 

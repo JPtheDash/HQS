@@ -350,19 +350,10 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   openStory() {
-    const { top, addToModal } = this.openModal('THE STORY');
-    const body = this.add.text(CENTER_X, top + 120,
-      'In the great war, Lakshmana falls,\nstruck down and near death.\n\n' +
-      'Only the Sanjeevini herb can save him —\nbut it grows far away, upon the\nsacred mountain of Gandha Mardana.\n\n' +
-      'Hanuman must race across forest, river,\nand storm to bring it back before sunrise.', {
-        fontFamily: 'Georgia, serif', fontSize: '25px', color: '#f3e6c8',
-        align: 'center', lineSpacing: 7
-      }).setOrigin(0.5, 0).setDepth(3002);
-    addToModal(body);
-    this.panelButton(CENTER_X, top + this.modalBottomOffset(), '▶  Watch Intro', () => {
-      this.closeModal();
-      this.playIntro();
-    });
+    if (this.modal) this.closeModal();
+    const p = this.showPanelImage('story-panel');
+    this.hitZone(p, 0.22, 0.795, 0.56, 0.105, () => { this.closeModal(); this.playIntro(); }); // Watch Intro
+    this.hitZone(p, 0.84, 0.095, 0.13, 0.09, () => this.closeModal());                          // ✕
   }
 
   modalBottomOffset() {

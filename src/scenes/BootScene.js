@@ -25,6 +25,15 @@ export default class BootScene extends Phaser.Scene {
     this.bakeHeroSheet();     // rebuild the in-game 'hero' from the new sheet
     this.bakeLoadingRunner(); // build 'hero-load-run' from the new sheet's run row
     Player.createAnims(this); // register idle/run/jump/fly globally
+
+    // Persist the coin total across sessions: load it, then save on every change.
+    try {
+      const saved = parseInt(localStorage.getItem('hqs.coins') || '0', 10);
+      this.game.registry.set('coinTotal', Number.isNaN(saved) ? 0 : saved);
+    } catch (e) { /* private mode */ }
+    this.game.registry.events.on('changedata-coinTotal', (parent, value) => {
+      try { localStorage.setItem('hqs.coins', value); } catch (e) { /* ignore */ }
+    });
     // Start muted (user preference). The SOUND button on the main menu toggles
     // it back on; the setting persists across all scenes via the sound manager.
     this.sound.mute = true;

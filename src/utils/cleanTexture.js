@@ -88,14 +88,19 @@ export function stripCheckerGrey(scene, key) {
   for (let y = 0; y < h; y++) { sampleBorder(0, y); sampleBorder(w - 1, y); }
   const shades = Object.entries(hist).sort((a, b) => b[1] - a[1]).slice(0, 6).map((e) => +e[0]);
   if (!shades.length) { set.add(key); return; }
-
+  // Treat the WHOLE grey band spanned by the checker as background, not just the
+  // two exact shades. The checker's squares are anti-aliased into each other, so
+  // the transition pixels (e.g. ~159 between 127 and 191) must count as checker
+  // too — otherwise they form a grid of thin lines that block the flood fill and
+  // leave big patches of background behind (the "box" around the cloud).
+  const loT = Math.min(...shades) - 14;
+  const hiT = Math.max(...shades) + 14;
   const isChecker = (i) => {
     if (d[i + 3] === 0) return true;
     const r = d[i], g = d[i + 1], b = d[i + 2];
     if (Math.max(r, g, b) - Math.min(r, g, b) > 16) return false; // coloured → keep
     const v = (r + g + b) / 3;
-    for (const s of shades) if (Math.abs(v - s) <= 22) return true;
-    return false;
+    return v >= loT && v <= hiT;
   };
 
   const visited = new Uint8Array(w * h);

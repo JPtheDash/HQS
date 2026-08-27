@@ -10,6 +10,7 @@ import { stripBackground } from '../utils/cleanTexture.js';
 // and the occasional ROCK. SWIPE to throw the gada at the boss; whittle its HP to
 // zero to win. Keeps the simple jump → dodge → attack loop the doc asks for.
 const GROUND_Y = GAME_HEIGHT - 150;
+const WORLD_W = 3200; // horizontal arena — Hanuman runs/flies toward the boss
 const BOSS_MAX_HP = 6;
 
 export default class RiverBossScene extends Phaser.Scene {
@@ -28,9 +29,9 @@ export default class RiverBossScene extends Phaser.Scene {
     this.bossHP = BOSS_MAX_HP;
     this.gadaCooldown = 0;
 
-    // Fixed single-screen arena.
-    this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.cameras.main.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    // Horizontal arena.
+    this.physics.world.setBounds(0, 0, WORLD_W, GAME_HEIGHT);
+    this.cameras.main.setBounds(0, 0, WORLD_W, GAME_HEIGHT);
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
     this.buildBackground();
@@ -47,6 +48,8 @@ export default class RiverBossScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.solids);
     this.physics.add.overlap(this.player, this.waves, this.onWaveHit, null, this);
     this.physics.add.overlap(this.gadas, this.boss, this.onGadaBoss, null, this);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setFollowOffset(-80, 60);
 
     this.hud = new Hud(this, { maxHealth: 3 });
     // No energy or countdown in the boss arena — hide them so the boss HP bar
@@ -65,8 +68,11 @@ export default class RiverBossScene extends Phaser.Scene {
 
   buildBackground() {
     const key = this.textures.exists('bgriverboss') ? 'bgriverboss' : 'bg2';
-    this.add.image(0, 0, key).setOrigin(0, 0).setScrollFactor(0).setDepth(-100).setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x0a1a2a, 0.18).setOrigin(0, 0).setDepth(-98);
+    const bg = this.add.tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, key).setOrigin(0, 0).setScrollFactor(0).setDepth(-100);
+    const tex = this.textures.get(key).getSourceImage();
+    bg.tileScaleX = bg.tileScaleY = GAME_HEIGHT / tex.height;
+    this.bg = bg;
+    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x0a1a2a, 0.18).setOrigin(0, 0).setScrollFactor(0).setDepth(-98);
   }
 
   buildGround() {
@@ -74,28 +80,74 @@ export default class RiverBossScene extends Phaser.Scene {
     const tScale = 0.42;
     const displayH = texH * tScale;
     const grassOffset = displayH * 0.55;
-    const ts = this.add.tileSprite(0, GROUND_Y - grassOffset, GAME_WIDTH, displayH, 'ground').setOrigin(0, 0).setDepth(-10);
+    const ts = this.add.tileSprite(0, GROUND_Y - grassOffset, WORLD_W, displayH, 'ground').setOrigin(0, 0).setDepth(-10);
     ts.setTileScale(tScale, tScale);
     ts.setTint(0x8fa0a0);
-    this.add.rectangle(0, GROUND_Y - grassOffset + displayH, GAME_WIDTH, GAME_HEIGHT, 0x24303a).setOrigin(0, 0).setDepth(-11);
-    const body = this.add.rectangle(GAME_WIDTH / 2, GROUND_Y + 40, GAME_WIDTH, 80);
+    this.add.rectangle(0, GROUND_Y - grassOffset + displayH, WORLD_W, GAME_HEIGHT, 0x24303a).setOrigin(0, 0).setDepth(-11);
+    const body = this.add.rectangle(WORLD_W / 2, GROUND_Y + 40, WORLD_W, 80);
     this.physics.add.existing(body, true);
     body.setVisible(false);
     this.solids.add(body);
   }
 
   buildBoss() {
-    const key = this.textures.exists('boss') ? 'boss' : 'bosscharacter';
-    this.boss = this.physics.add.staticImage(GAME_WIDTH - 150, GROUND_Y - 10, this.textures.exists(key) ? key : 'boulder').setOrigin(0.5, 1);
-    const dispH = 420;
-    this.boss.setScale(dispH / this.boss.height);
+    this.bossAnim = this.bakeBossSheet();
+    const dispH = 440;
+    if (this.bossAnim) {
+      this.boss = this.physics.add.staticSprite(WORLD_W - 240, GROUND_Y - 10, 'boss-anim', 0).setOrigin(0.5, this.bossFeetFrac);
+      this.boss.setScale(dispH / this.bossCellH);
+      this.boss.play('boss-idle');
+    } else {
+      const key = this.textures.exists('boss') ? 'boss' : 'boulder';
+      this.boss = this.physics.add.staticImage(WORLD_W - 240, GROUND_Y - 10, key).setOrigin(0.5, 1);
+      this.boss.setScale(dispH / this.boss.height);
+    }
     this.boss.setFlipX(true); // face left, toward Hanuman (art faces right by default)
-    this.boss.body.setSize(this.boss.width * 0.5, this.boss.height * 0.7);
+    this.boss.body.setSize(this.boss.width * 0.42, this.boss.height * 0.6);
+    this.boss.body.setOffset((this.boss.width - this.boss.width * 0.42) / 2, this.boss.height * 0.25);
     this.boss.refreshBody();
     this.boss.setDepth(4);
     this.boss.alive = true;
     // Menacing idle sway.
     this.tweens.add({ targets: this.boss, y: this.boss.y - 12, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+
+  // Bake the animated guardian sheet's idle row into 'boss-anim' + 'boss-idle'.
+  bakeBossSheet() {
+    const stored = this.game.registry.get('bossCell');
+    if (this.anims.exists('boss-idle') && stored) { this.bossCellH = stored.h; this.bossFeetFrac = stored.feetFrac; return true; }
+    if (!this.textures.exists('boss-sheet')) return false;
+    const src = this.textures.get('boss-sheet').getSourceImage();
+    const w = src.width, h = src.height;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d'); cx.drawImage(src, 0, 0);
+    const d = cx.getImageData(0, 0, w, h).data;
+    const A = (px, py) => d[(py * w + px) * 4 + 3];
+    // Idle row (measured band). Connected components, left→right.
+    const y0 = 8, y1 = 258, bw = w, bh = y1 - y0, lab = new Uint8Array(bw * bh), comps = [];
+    for (let yy = 0; yy < bh; yy++) for (let xx = 0; xx < bw; xx++) {
+      if (lab[yy * bw + xx] || A(xx, y0 + yy) <= 70) continue;
+      let minx = xx, maxx = xx, miny = yy, maxy = yy, cnt = 0; const st = [xx, yy]; lab[yy * bw + xx] = 1;
+      while (st.length) { const py = st.pop(), px = st.pop(); cnt++;
+        if (px < minx) minx = px; if (px > maxx) maxx = px; if (py < miny) miny = py; if (py > maxy) maxy = py;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = px + dx, ny = py + dy; if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue; const p = ny * bw + nx; if (!lab[p] && A(nx, y0 + ny) > 70) { lab[p] = 1; st.push(nx, ny); } } }
+      if (cnt > 3000 && (maxy - miny) >= 130) comps.push({ x: minx, y: y0 + miny, w: maxx - minx + 1, h: maxy - miny + 1 });
+    }
+    comps.sort((a, b) => a.x - b.x);
+    if (comps.length < 4) return false;
+    const n = comps.length, CW = 210, PAD = 8;
+    const CH = Math.max(...comps.map((c) => c.h)) + PAD * 2;
+    const out = document.createElement('canvas'); out.width = CW * n; out.height = CH;
+    const ox = out.getContext('2d');
+    comps.forEach((c, i) => ox.drawImage(cv, c.x, c.y, c.w, c.h, i * CW + (CW - c.w) / 2, CH - PAD - c.h, c.w, c.h));
+    const tex = this.textures.createCanvas('boss-anim', out.width, out.height);
+    tex.getContext().drawImage(out, 0, 0); tex.refresh();
+    for (let i = 0; i < n; i++) tex.add(i, 0, i * CW, 0, CW, CH);
+    this.anims.create({ key: 'boss-idle', frames: Array.from({ length: n }, (_, i) => ({ key: 'boss-anim', frame: i })), frameRate: 7, repeat: -1 });
+    this.bossCellH = CH;
+    this.bossFeetFrac = (CH - PAD) / CH;
+    this.game.registry.set('bossCell', { h: CH, feetFrac: this.bossFeetFrac });
+    return true;
   }
 
   buildBossBar() {
@@ -110,10 +162,12 @@ export default class RiverBossScene extends Phaser.Scene {
 
   bossAttack() {
     if (!this.boss.alive) return;
+    // Only attack once Hanuman is in range (it's a wide arena he runs across).
+    if (Math.abs(this.player.x - this.boss.x) > 1050) return;
     // Mostly water waves, sometimes a lobbed rock.
     if (Phaser.Math.Between(0, 3) === 0) this.throwRock();
     else this.spawnWave();
-    // A quick lunge tell.
+    if (this.bossAnim) { this.boss.play('boss-idle', true); }
     this.tweens.add({ targets: this.boss, x: this.boss.x - 20, duration: 140, yoyo: true });
   }
 
@@ -253,6 +307,7 @@ export default class RiverBossScene extends Phaser.Scene {
   }
 
   update() {
+    if (this.bg) this.bg.tilePositionX = this.cameras.main.scrollX * 0.25 / this.bg.tileScaleX;
     if (this.finished || !this.player.alive) return;
     const left = this.ctrl.left || this.cursors.left.isDown || this.keys.A.isDown;
     const right = this.ctrl.right || this.cursors.right.isDown || this.keys.D.isDown;
@@ -260,7 +315,8 @@ export default class RiverBossScene extends Phaser.Scene {
     else if (right && !left) this.player.moveRight();
     else this.player.stopMoving();
 
-    this.waves.children.iterate((w) => { if (w && (w.x < -80 || w.y > GAME_HEIGHT + 80)) w.destroy(); });
+    const leftEdge = this.cameras.main.scrollX - 120;
+    this.waves.children.iterate((w) => { if (w && (w.x < leftEdge || w.y > GAME_HEIGHT + 80)) w.destroy(); });
   }
 
   winLevel() {

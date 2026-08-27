@@ -284,19 +284,21 @@ export default class DangerScene extends Phaser.Scene {
   throwGadaSwipe() {
     if (this.finished || !this.player.alive || this.player.throwing) return;
     if (this.time.now < this.gadaCooldown) return;
-    const target = this.nearestTarget();
+    const facing = this.player.facing || 1;
+    const target = this.nearestTarget(facing);
     this.gadaCooldown = this.time.now + 450;
-    const tx = target ? target.x : this.player.x + 460;
+    const tx = target ? target.x : this.player.x + facing * 460;
     const ty = target ? target.y : this.player.y - 20;
     this.player.throwGada(() => this.spawnGada(tx, ty));
   }
 
-  nearestTarget() {
+  nearestTarget(facing = 1) {
     let target = null, best = 820 * 820;
     const consider = (o) => {
       if (!o || !o.active || o.alive === false) return;
-      if (o.x < this.player.x - 40) return; // only things ahead
-      const dx = o.x - this.player.x, dy = o.y - this.player.y;
+      const dx = o.x - this.player.x;
+      if (dx * facing < -40) return; // only things in the facing direction
+      const dy = o.y - this.player.y;
       const d2 = dx * dx + dy * dy;
       if (d2 < best) { best = d2; target = o; }
     };

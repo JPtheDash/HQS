@@ -23,6 +23,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('coins', 'assets/menu/coins.png');
     this.load.image('settings-panel', 'assets/menu/settings-panel.png');
     this.load.image('about-panel', 'assets/menu/about-panel.png');
+    this.load.image('story-panel', 'assets/menu/story-panel.png');
     // NOTE: 'glow' is generated procedurally in BootScene (not loaded).
 
     // ---- Prologue cinematic (Scenes 2-6) ----------------------------
@@ -65,8 +66,10 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('bat', 'assets/game/bat.png', { frameWidth: 453, frameHeight: 448 });
     this.load.spritesheet('fireball', 'assets/game/fireball.png', { frameWidth: 559, frameHeight: 401 });
     this.load.image('gada', 'assets/game/gada.png'); // thrown mace projectile
-    this.load.image('rakshasa', 'assets/game/rakshasa.png'); // demon enemy
-    this.load.image('boss', 'assets/game/boss.png'); // river guardian boss
+    this.load.image('rakshasa', 'assets/game/rakshasa.png'); // demon enemy (static fallback)
+    this.load.image('rakshasa-sheet', 'assets/game/rakshasa-sheet.png'); // animated demon
+    this.load.image('boss', 'assets/game/boss.png'); // river guardian boss (static fallback)
+    this.load.image('boss-sheet', 'assets/game/boss-sheet.png'); // animated guardian
     // ---- Ornate UI buttons (pause / resume / reset / home) ------------
     this.load.image('btn-pause', 'assets/game/btn-pause.png');
     this.load.image('btn-resume', 'assets/game/btn-resume.png');
